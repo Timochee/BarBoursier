@@ -13,4 +13,6 @@ yarn-error.log*
 .DS_Store
 .idea
 package-lock.json
-/server/data/
+*.db
+*.db-shm
+*.db-wal
