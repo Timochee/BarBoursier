@@ -1,0 +1,90 @@
+import express from 'express';
+import cors from 'cors';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { initializeDatabase, closeDatabase } from './db/connection';
+import apiRoutes from './routes';
+import { marketService, chartDataService } from './services';
+import type { BuyRequest } from 'shared';
+
+const PORT = process.env.PORT || 3001;
+
+// Initialize database
+initializeDatabase();
+chartDataService.initializeHistory();
+
+// Create Express app
+const app = express();
+const httpServer = createServer(app);
+
+// Socket.io setup
+const io = new Server(httpServer, {
+  cors: {
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    methods: ['GET', 'POST'],
+  },
+});
+
+// Middleware
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+}));
+app.use(express.json());
+
+// API routes
+app.use('/api', apiRoutes);
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+// Socket.io events
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
+  // Send initial data
+  const beers = marketService.getAllBeers();
+  socket.emit('pricesUpdated', beers);
+
+  // Handle buy event
+  socket.on('buy', (data: BuyRequest) => {
+    const result = marketService.buy(data.beerId, data.quantity);
+
+    if (result) {
+      // Broadcast updated prices to all clients
+      const updatedBeers = marketService.getAllBeers();
+      io.emit('pricesUpdated', updatedBeers);
+      socket.emit('purchaseResult', result);
+    }
+  });
+
+  // Handle reset event
+  socket.on('reset', () => {
+    const beers = marketService.reset();
+    io.emit('marketReset');
+    io.emit('pricesUpdated', beers);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
+// Start server
+httpServer.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Shutting down...');
+  closeDatabase();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('Shutting down...');
+  closeDatabase();
+  process.exit(0);
+});

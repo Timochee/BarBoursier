@@ -1,0 +1,198 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent: #e94560;
+  --accent-hover: #d63850;
+  --green: #10b981;
+  --red: #ef4444;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark mode */
+.dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-color: #334155;
+}
+
+/* Light mode */
+.light {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --border-color: #e2e8f0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-primary);
+}
+
+/* Animations */
+@keyframes pulse-green {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(16, 185, 129, 0.2); }
+}
+
+@keyframes pulse-red {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(239, 68, 68, 0.2); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .glass {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Button styles */
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 transform active:scale-95;
+}
+
+.btn-primary {
+  @apply bg-[#e94560] text-white hover:bg-[#d63850] shadow-lg shadow-[#e94560]/25;
+}
+
+.btn-secondary {
+  @apply bg-slate-700 text-white hover:bg-slate-600;
+}
+
+.btn-ghost {
+  @apply bg-transparent hover:bg-white/10;
+}
+
+/* Card styles */
+.card {
+  @apply rounded-xl shadow-xl overflow-hidden;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+/* Input styles */
+input[type="number"] {
+  @apply rounded-lg border-2 transition-all duration-200;
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+input[type="number"]:focus {
+  @apply outline-none ring-2 ring-[#e94560]/50 border-[#e94560];
+}
+
+/* Table styles */
+.table-header {
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+}
+
+.table-row {
+  @apply transition-all duration-200;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table-row:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Price change indicators */
+.price-up {
+  @apply text-emerald-500 font-semibold;
+}
+
+.price-down {
+  @apply text-red-500 font-semibold;
+}
+
+.price-neutral {
+  @apply text-slate-400;
+}
+
+/* Category badges */
+.badge {
+  @apply px-2 py-1 rounded-full text-xs font-semibold uppercase tracking-wide;
+}
+
+.badge-pils {
+  @apply bg-blue-500/20 text-blue-400;
+}
+
+.badge-abbey {
+  @apply bg-amber-500/20 text-amber-400;
+}
+
+.badge-trappist {
+  @apply bg-red-500/20 text-red-400;
+}
+
+.badge-specialty {
+  @apply bg-emerald-500/20 text-emerald-400;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  @apply card max-h-[85vh] overflow-hidden animate-slide-up;
+  max-width: 90vw;
+}
