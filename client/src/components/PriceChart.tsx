@@ -9,12 +9,40 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import type { ChartData, Beer } from '../types';
+import type { ChartData, Beer } from 'shared';
 import { SECTOR_COLORS, createBeerColorMap, getBeerColor } from '../utils/colors';
 
 interface PriceChartProps {
   chartData: ChartData | null;
   beers: Beer[];
+}
+
+function formatTime(timestamp: string): string {
+  try {
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) {
+      return timestamp;
+    }
+    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return timestamp;
+  }
+}
+
+function formatDateTime(timestamp: string): string {
+  try {
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) {
+      return `Transaction #${timestamp}`;
+    }
+    return date.toLocaleString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  } catch {
+    return `Transaction #${timestamp}`;
+  }
 }
 
 export function PriceChart({ chartData, beers }: PriceChartProps) {
@@ -48,12 +76,33 @@ export function PriceChart({ chartData, beers }: PriceChartProps) {
     });
   };
 
+  const selectAllBeers = () => {
+    // Empty set means "show all" in current logic
+    setSelectedBeers(new Set());
+  };
+
+  const selectNoneBeers = () => {
+    // To hide all, we'd need to handle differently
+    // For now, let's just provide a way to reset to all
+    // We'll invert: select just one beer to "deselect" others
+    if (beers.length > 0) {
+      setSelectedBeers(new Set([beers[0].id]));
+    }
+  };
+
+  // Calculate visibility state
+  const allVisible = selectedBeers.size === 0;
+
   // Prepare data for chart and calculate min/max
   let minPrice = Infinity;
   let maxPrice = -Infinity;
 
-  const data = chartData.timeLabels.map((_label, index) => {
-    const point: Record<string, number | string> = { time: index + 1 };
+  const data = chartData.timeLabels.map((label, index) => {
+    const point: Record<string, number | string> = {
+      time: index + 1,
+      timestamp: label,
+      displayTime: formatTime(label),
+    };
 
     if (viewMode === 'sector') {
       Object.entries(chartData.sectorPriceHistory).forEach(([sector, prices]) => {
@@ -113,30 +162,58 @@ export function PriceChart({ chartData, beers }: PriceChartProps) {
         </div>
 
         {viewMode === 'beer' && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Select All/Reset buttons */}
+            <div className="flex gap-1 mr-2">
+              <button
+                onClick={selectAllBeers}
+                disabled={allVisible}
+                className={`px-2 py-1 text-xs rounded transition-all ${
+                  allVisible
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-white/10'
+                }`}
+                style={{ background: 'var(--bg-tertiary)' }}
+                aria-label="Show all beers"
+              >
+                All ({beers.length})
+              </button>
+              <button
+                onClick={selectNoneBeers}
+                className="px-2 py-1 text-xs rounded hover:bg-white/10 transition-all"
+                style={{ background: 'var(--bg-tertiary)' }}
+                aria-label="Show only first beer"
+              >
+                Reset
+              </button>
+            </div>
+
+            <div className="w-px h-6" style={{ background: 'var(--border-color)' }} />
+
+            {/* Beer checkboxes */}
             {beers.map((beer) => {
               const beerColor = getBeerColor(beer.id, beerColorMap);
+              const isVisible = selectedBeers.size === 0 || selectedBeers.has(beer.id);
               return (
                 <label
                   key={beer.id}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all text-sm ${
-                    selectedBeers.size === 0 || selectedBeers.has(beer.id)
-                      ? 'opacity-100'
-                      : 'opacity-40'
+                    isVisible ? 'opacity-100' : 'opacity-40'
                   }`}
                   style={{ background: 'var(--bg-tertiary)' }}
                 >
                   <span
-                    className="w-3 h-3 rounded-full"
+                    className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ background: beerColor }}
                   />
                   <input
                     type="checkbox"
-                    checked={selectedBeers.size === 0 || selectedBeers.has(beer.id)}
+                    checked={isVisible}
                     onChange={() => toggleBeer(beer.id)}
                     className="sr-only"
+                    aria-label={`Toggle ${beer.name} visibility`}
                   />
-                  {beer.name}
+                  <span className="truncate max-w-[100px]">{beer.name}</span>
                 </label>
               );
             })}
@@ -149,10 +226,11 @@ export function PriceChart({ chartData, beers }: PriceChartProps) {
         <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
           <XAxis
-            dataKey="time"
+            dataKey="displayTime"
             stroke="var(--text-secondary)"
-            tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
+            tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
             tickLine={{ stroke: 'var(--border-color)' }}
+            interval="preserveStartEnd"
           />
           <YAxis
             stroke="var(--text-secondary)"
@@ -171,7 +249,13 @@ export function PriceChart({ chartData, beers }: PriceChartProps) {
             labelStyle={{ color: 'var(--text-primary)', fontWeight: 'bold' }}
             itemStyle={{ color: 'var(--text-primary)' }}
             formatter={(value: number) => [`${value.toFixed(2)} EUR`, '']}
-            labelFormatter={(label) => `Transaction #${label}`}
+            labelFormatter={(_label, payload) => {
+              if (payload && payload.length > 0) {
+                const timestamp = payload[0]?.payload?.timestamp;
+                return timestamp ? formatDateTime(timestamp) : `#${payload[0]?.payload?.time}`;
+              }
+              return '';
+            }}
           />
           <Legend
             wrapperStyle={{ paddingTop: '20px' }}

@@ -5,6 +5,7 @@ import { Server } from 'socket.io';
 import { initializeDatabase, closeDatabase } from './db/connection';
 import apiRoutes from './routes';
 import { marketService, chartDataService } from './services';
+import { setSocketIO } from './socket';
 import type { BuyRequest } from 'shared';
 
 const PORT = process.env.PORT || 3001;
@@ -24,6 +25,9 @@ const io = new Server(httpServer, {
     methods: ['GET', 'POST'],
   },
 });
+
+// Make io available globally for beer updates
+setSocketIO(io);
 
 // Middleware
 app.use(cors({

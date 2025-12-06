@@ -1,4 +1,5 @@
-import type { PurchaseImpact } from '../types';
+import { useEffect, useRef } from 'react';
+import type { PurchaseImpact } from 'shared';
 
 interface ImpactDialogProps {
   impact: PurchaseImpact;
@@ -6,6 +7,20 @@ interface ImpactDialogProps {
 }
 
 export function ImpactDialog({ impact, onClose }: ImpactDialogProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
   const getChangeClass = (change: number) => {
     if (change > 0) return 'price-up';
     if (change < 0) return 'price-down';
@@ -31,7 +46,13 @@ export function ImpactDialog({ impact, onClose }: ImpactDialogProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="impact-dialog-title"
+    >
       <div
         className="modal-content w-full max-w-lg"
         onClick={e => e.stopPropagation()}
@@ -48,7 +69,7 @@ export function ImpactDialog({ impact, onClose }: ImpactDialogProps) {
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold">Purchase Complete!</h2>
+              <h2 id="impact-dialog-title" className="text-xl font-bold">Purchase Complete!</h2>
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 Market impact analysis
               </p>
@@ -129,7 +150,11 @@ export function ImpactDialog({ impact, onClose }: ImpactDialogProps) {
           className="px-6 py-4 border-t"
           style={{ borderColor: 'var(--border-color)' }}
         >
-          <button onClick={onClose} className="btn btn-primary w-full">
+          <button
+            ref={closeButtonRef}
+            onClick={onClose}
+            className="btn btn-primary w-full"
+          >
             Continue Trading
           </button>
         </div>

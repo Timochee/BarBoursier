@@ -28,6 +28,7 @@ body {
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
   --border-color: #334155;
+  --row-hover: rgba(71, 85, 105, 0.4);
 }
 
 /* Light mode */
@@ -38,6 +39,7 @@ body {
   --text-primary: #0f172a;
   --text-secondary: #64748b;
   --border-color: #e2e8f0;
+  --row-hover: rgba(148, 163, 184, 0.3);
 }
 
 /* Scrollbar */
@@ -131,10 +133,29 @@ input[type="number"] {
   background: var(--bg-tertiary);
   border-color: var(--border-color);
   color: var(--text-primary);
+  /* Larger touch target on mobile */
+  min-height: 44px;
+}
+
+@media (min-width: 640px) {
+  input[type="number"] {
+    min-height: auto;
+  }
 }
 
 input[type="number"]:focus {
   @apply outline-none ring-2 ring-[#e94560]/50 border-[#e94560];
+}
+
+/* Remove number input spinners on mobile for cleaner look */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
 /* Table styles */
@@ -148,7 +169,18 @@ input[type="number"]:focus {
 }
 
 .table-row:hover {
-  background: var(--bg-tertiary);
+  background: var(--row-hover);
+}
+
+/* Mobile table improvements */
+@media (max-width: 639px) {
+  .table-row td {
+    @apply py-3 px-2;
+  }
+
+  .table-header th {
+    @apply py-3 px-2 text-[10px];
+  }
 }
 
 /* Price change indicators */

@@ -58,6 +58,102 @@ export class BeerRepository {
     const result = stmt.get() as { total: number };
     return result.total;
   }
+
+  create(beer: {
+    name: string;
+    basePrice: number;
+    category: string;
+    volatility: number;
+  }): Beer {
+    const stmt = db.prepare(`
+      INSERT INTO beers (name, base_price, current_price, category, volatility)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(
+      beer.name,
+      beer.basePrice,
+      beer.basePrice, // current_price starts at base_price
+      beer.category,
+      beer.volatility
+    );
+
+    return {
+      id: result.lastInsertRowid as number,
+      name: beer.name,
+      basePrice: beer.basePrice,
+      currentPrice: beer.basePrice,
+      category: beer.category,
+      volatility: beer.volatility,
+    };
+  }
+
+  update(id: number, beer: {
+    name?: string;
+    basePrice?: number;
+    category?: string;
+    volatility?: number;
+  }): Beer | undefined {
+    const existing = this.getById(id);
+    if (!existing) return undefined;
+
+    const updates: string[] = [];
+    const values: (string | number)[] = [];
+
+    if (beer.name !== undefined) {
+      updates.push('name = ?');
+      values.push(beer.name);
+    }
+    if (beer.basePrice !== undefined) {
+      updates.push('base_price = ?');
+      values.push(beer.basePrice);
+    }
+    if (beer.category !== undefined) {
+      updates.push('category = ?');
+      values.push(beer.category);
+    }
+    if (beer.volatility !== undefined) {
+      updates.push('volatility = ?');
+      values.push(beer.volatility);
+    }
+
+    if (updates.length === 0) return existing;
+
+    values.push(id);
+    const stmt = db.prepare(`UPDATE beers SET ${updates.join(', ')} WHERE id = ?`);
+    stmt.run(...values);
+
+    return this.getById(id);
+  }
+
+  delete(id: number): boolean {
+    // First delete related price history
+    const deleteHistory = db.prepare('DELETE FROM price_history WHERE beer_id = ?');
+    deleteHistory.run(id);
+
+    // Delete related transactions
+    const deleteTransactions = db.prepare('DELETE FROM transactions WHERE beer_id = ?');
+    deleteTransactions.run(id);
+
+    // Delete the beer
+    const stmt = db.prepare('DELETE FROM beers WHERE id = ?');
+    const result = stmt.run(id);
+    return result.changes > 0;
+  }
+
+  exists(name: string, excludeId?: number): boolean {
+    if (excludeId) {
+      const stmt = db.prepare('SELECT 1 FROM beers WHERE LOWER(name) = LOWER(?) AND id != ?');
+      return stmt.get(name, excludeId) !== undefined;
+    }
+    const stmt = db.prepare('SELECT 1 FROM beers WHERE LOWER(name) = LOWER(?)');
+    return stmt.get(name) !== undefined;
+  }
+
+  getCategories(): string[] {
+    const stmt = db.prepare('SELECT DISTINCT category FROM beers ORDER BY category');
+    const rows = stmt.all() as { category: string }[];
+    return rows.map(r => r.category);
+  }
 }
 
 export const beerRepository = new BeerRepository();

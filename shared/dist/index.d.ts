@@ -50,3 +50,8 @@ export declare const MEAN_REVERSION_BASE_STRENGTH = 0.01;
 export declare const MAX_DECREASE_RATIO = 0.1;
 export declare const SECTOR_REVERSION_MULTIPLIERS: Record<string, number>;
 export declare const SECTOR_MATRIX: Record<string, Record<string, number>>;
+export declare const CATEGORIES: readonly ["pils", "abbey", "trappist", "specialty"];
+export type Category = typeof CATEGORIES[number];
+export declare const BUY_COOLDOWN_MS = 300;
+export declare const DEFAULT_TRANSACTION_LIMIT = 50;
+export declare const DEFAULT_PRICE_HISTORY_LIMIT = 100;

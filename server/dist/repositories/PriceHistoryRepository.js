@@ -68,17 +68,18 @@ class PriceHistoryRepository {
         return history;
     }
     /**
-     * Get time labels (batch numbers) for the chart
+     * Get time labels (timestamps) for the chart
      */
     getTimeLabels(limit = 100) {
         const stmt = connection_1.db.prepare(`
-      SELECT DISTINCT batch_id
+      SELECT batch_id, MIN(timestamp) as timestamp
       FROM price_history
+      GROUP BY batch_id
       ORDER BY batch_id ASC
       LIMIT ?
     `);
         const rows = stmt.all(limit);
-        return rows.map(r => String(r.batch_id));
+        return rows.map(r => r.timestamp);
     }
     /**
      * Get the current batch count (number of price snapshots)

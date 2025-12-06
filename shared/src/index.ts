@@ -81,3 +81,12 @@ export const SECTOR_MATRIX: Record<string, Record<string, number>> = {
   trappist: { pils: 0.5, abbey: 0.9, specialty: 0.5 },
   specialty: { pils: 0.4, abbey: 0.5, trappist: 0.5 },
 };
+
+// Valid beer categories
+export const CATEGORIES = ['pils', 'abbey', 'trappist', 'specialty'] as const;
+export type Category = typeof CATEGORIES[number];
+
+// UI constants
+export const BUY_COOLDOWN_MS = 300;
+export const DEFAULT_TRANSACTION_LIMIT = 50;
+export const DEFAULT_PRICE_HISTORY_LIMIT = 100;

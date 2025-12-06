@@ -26,19 +26,94 @@ npm start            # Run production
 
 Monorepo structure with client/server separation and shared types:
 
-- `client/` - React frontend with components, hooks, services
-- `server/` - Express backend with routes, services, repositories, database
-- `shared/` - Shared TypeScript types and pricing constants
+```
+barboursier/
+├── client/                 # React frontend
+│   └── src/
+│       ├── components/     # UI components
+│       ├── hooks/          # Custom React hooks
+│       ├── services/       # API and Socket.io clients
+│       └── utils/          # Shared utilities (colors, styles)
+├── server/                 # Express backend
+│   └── src/
+│       ├── db/             # Database connection and migrations
+│       ├── repositories/   # Data access layer
+│       ├── routes/         # Express route handlers
+│       ├── services/       # Business logic
+│       └── socket/         # Socket.io handlers
+└── shared/                 # Shared types and constants
+    └── src/
+        └── index.ts        # Types, constants, pricing config
+```
+
+### Shared Package (`shared/`)
+All types, constants, and pricing configuration are centralized:
+- **Types**: Beer, Transaction, PurchaseResult, ChartData, MarketStats, Settings
+- **Constants**: CATEGORIES, BUY_COOLDOWN_MS, DEFAULT_SETTINGS
+- **Pricing Config**: SECTOR_MATRIX, SECTOR_REVERSION_MULTIPLIERS, MEAN_REVERSION_BASE_STRENGTH
 
 ### Backend Services
 - **PricingService** - Core pricing algorithm (zero-sum, sector correlation, mean reversion)
 - **MarketService** - Market operations (buy, reset)
 - **ChartDataService** - Price history for charts
 
+### Backend Repositories
+- **BeerRepository** - Beer CRUD operations
+- **TransactionRepository** - Transaction storage (uses SQL template extraction)
+- **PriceHistoryRepository** - Price snapshots for charts
+- **SettingsRepository** - Dynamic settings storage
+
+### Frontend Components
+- **BeerTable** - Main table with sorting, category filtering, buy actions
+- **PriceChart** - Recharts line chart (by sector or by beer view)
+- **BeerManagement** - Modal container for beer CRUD
+  - **BeerForm** - Add/edit beer form
+  - **BeerListItem** - Individual beer row in manage list
+- **TransactionHistory** - Modal showing purchase history
+- **ImpactDialog** - Shows price impact after purchase
+- **ConfirmDialog** - Reusable confirmation modal
+- **Toast/ToastContainer** - Toast notification system
+- **Tooltip** - Hover tooltips for UI elements
+- **Skeleton** - Loading skeletons (table, chart, stats)
+
 ### Frontend Hooks
-- **useMarket** - Market state management via Socket.io
-- **useBeers** - Beer data fetching
+- **useMarket** - Market state management via Socket.io (beers, stats, chart data, buy, reset)
+- **useBeerSort** - Beer sorting and filtering logic (extracted from BeerTable)
+- **useToast** - Toast notifications (success, error, warning, info)
 - **useTheme** - Dark/light theme support
+- **useTransactions** - Fetch transaction history
+
+### Frontend Utilities
+- **utils/colors.ts** - Beer color mapping for charts
+- **utils/styles.ts** - Centralized category styles and default volatility values
+
+## UI/UX Features
+
+### Header Actions (left to right)
+1. **Beers** - Open beer management modal
+2. **History** - Open transaction history
+3. **Keep Qty** - Toggle: keep quantity after purchase (amber when active)
+4. **Impact** - Toggle: show impact dialog after purchase (green when active)
+5. **Reset** - Reset market (red, with confirmation dialog)
+6. **Live/Offline** - Connection status indicator
+7. **Theme toggle** - Dark/light mode switch
+
+### Beer Market Section
+- **Category filter badges** - Click to filter table by category (Clear button appears on left)
+- **Sortable columns** - Category, Name, Base price, Current price, Change %
+- **Category badges** - Only shown for first beer in consecutive category group
+- **Quantity input** - Per-beer quantity selector
+- **Buy button** - With loading spinner and cooldown
+
+### Price Chart
+- **View modes** - By Sector / By Beer toggle
+- **Beer selection** - Show/hide individual beers (in beer mode)
+- **Timestamps** - X-axis shows transaction times
+
+### Styling
+- CSS variables for theming: `--bg-primary`, `--bg-secondary`, `--bg-tertiary`, `--text-primary`, `--text-secondary`, `--border-color`, `--row-hover`
+- Badge styles: `badge-pils`, `badge-abbey`, `badge-trappist`, `badge-specialty`
+- Price indicators: `price-up` (green), `price-down` (red), `price-neutral`
 
 ## Pricing Algorithm
 
@@ -122,13 +197,33 @@ Sector Matrix (row buys → column decreases):
 
 ## API Structure
 
+### Beers
 - `GET /api/beers` - All beers
+- `GET /api/beers/:id` - Single beer
+- `GET /api/beers/category/:category` - Beers by category
+- `GET /api/beers/categories` - List of categories
+- `POST /api/beers` - Create beer `{ name, basePrice, category, volatility }`
+- `PUT /api/beers/:id` - Update beer
+- `DELETE /api/beers/:id` - Delete beer
+
+### Market
 - `POST /api/market/buy` - Buy beer `{ beerId, quantity }`
 - `POST /api/market/reset` - Reset market
+- `GET /api/market/total` - Market stats
 - `GET /api/market/chart-data` - Chart data
-- `GET /api/transactions` - Transaction history
+
+### Transactions
+- `GET /api/transactions` - Transaction history (optional `?limit=N`)
+- `GET /api/transactions/count` - Transaction count
 
 ## WebSocket Events
 
-- Client emits: `buy`, `reset`
-- Server emits: `pricesUpdated`, `purchaseResult`, `marketReset`
+### Client → Server
+- `buy` - `{ beerId, quantity }`
+- `reset` - Reset market
+
+### Server → Client
+- `pricesUpdated` - Beer array with new prices
+- `beersUpdated` - Beer list changed (add/edit/delete)
+- `purchaseResult` - Purchase result with impact data
+- `marketReset` - Market was reset

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useTransactions } from '../hooks';
 
 interface TransactionHistoryProps {
@@ -6,9 +7,29 @@ interface TransactionHistoryProps {
 
 export function TransactionHistory({ onClose }: TransactionHistoryProps) {
   const { data: transactions, isLoading } = useTransactions(100);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="history-dialog-title"
+    >
       <div
         className="modal-content w-full max-w-4xl"
         onClick={e => e.stopPropagation()}
@@ -19,7 +40,7 @@ export function TransactionHistory({ onClose }: TransactionHistoryProps) {
           style={{ borderColor: 'var(--border-color)' }}
         >
           <div>
-            <h2 className="text-xl font-bold">Transaction History</h2>
+            <h2 id="history-dialog-title" className="text-xl font-bold">Transaction History</h2>
             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               {transactions?.length || 0} transactions recorded
             </p>
@@ -27,8 +48,9 @@ export function TransactionHistory({ onClose }: TransactionHistoryProps) {
           <button
             onClick={onClose}
             className="p-2 rounded-lg transition-colors hover:bg-white/10"
+            aria-label="Close transaction history"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -114,7 +136,7 @@ export function TransactionHistory({ onClose }: TransactionHistoryProps) {
               {transactions?.reduce((sum, tx) => sum + tx.totalPrice, 0).toFixed(2) || '0.00'} EUR
             </span>
           </p>
-          <button onClick={onClose} className="btn btn-primary">
+          <button ref={closeButtonRef} onClick={onClose} className="btn btn-primary">
             Close
           </button>
         </div>

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SECTOR_MATRIX = exports.SECTOR_REVERSION_MULTIPLIERS = exports.MAX_DECREASE_RATIO = exports.MEAN_REVERSION_BASE_STRENGTH = exports.DEFAULT_SETTINGS = void 0;
+exports.DEFAULT_PRICE_HISTORY_LIMIT = exports.DEFAULT_TRANSACTION_LIMIT = exports.BUY_COOLDOWN_MS = exports.CATEGORIES = exports.SECTOR_MATRIX = exports.SECTOR_REVERSION_MULTIPLIERS = exports.MAX_DECREASE_RATIO = exports.MEAN_REVERSION_BASE_STRENGTH = exports.DEFAULT_SETTINGS = void 0;
 exports.DEFAULT_SETTINGS = {
     baseMove: 0.45,
     sectorCorrelation: 0.45,
@@ -26,3 +26,9 @@ exports.SECTOR_MATRIX = {
     trappist: { pils: 0.5, abbey: 0.9, specialty: 0.5 },
     specialty: { pils: 0.4, abbey: 0.5, trappist: 0.5 },
 };
+// Valid beer categories
+exports.CATEGORIES = ['pils', 'abbey', 'trappist', 'specialty'];
+// UI constants
+exports.BUY_COOLDOWN_MS = 300;
+exports.DEFAULT_TRANSACTION_LIMIT = 50;
+exports.DEFAULT_PRICE_HISTORY_LIMIT = 100;

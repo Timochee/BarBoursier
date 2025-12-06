@@ -1,6 +1,24 @@
-import type { Beer, Transaction, MarketStats, ChartData, PurchaseResult, BuyRequest } from '../types';
+import type { Beer, Transaction, MarketStats, ChartData, PurchaseResult, BuyRequest } from 'shared';
 
 const API_BASE = '/api';
+
+export interface CreateBeerRequest {
+  name: string;
+  basePrice: number;
+  category: string;
+  volatility: number;
+}
+
+export interface UpdateBeerRequest {
+  name?: string;
+  basePrice?: number;
+  category?: string;
+  volatility?: number;
+}
+
+export interface ApiError {
+  error: string;
+}
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${url}`, {
@@ -12,7 +30,8 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`API error: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({ error: response.statusText }));
+    throw new Error(errorData.error || `API error: ${response.statusText}`);
   }
 
   return response.json();
@@ -23,6 +42,21 @@ export const api = {
   getBeers: () => fetchJson<Beer[]>('/beers'),
   getBeer: (id: number) => fetchJson<Beer>(`/beers/${id}`),
   getBeersByCategory: (category: string) => fetchJson<Beer[]>(`/beers/category/${category}`),
+  getCategories: () => fetchJson<string[]>('/beers/categories'),
+  createBeer: (beer: CreateBeerRequest) =>
+    fetchJson<Beer>('/beers', {
+      method: 'POST',
+      body: JSON.stringify(beer),
+    }),
+  updateBeer: (id: number, beer: UpdateBeerRequest) =>
+    fetchJson<Beer>(`/beers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(beer),
+    }),
+  deleteBeer: (id: number) =>
+    fetchJson<{ success: boolean; message: string }>(`/beers/${id}`, {
+      method: 'DELETE',
+    }),
 
   // Market
   buy: (request: BuyRequest) =>

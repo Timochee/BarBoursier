@@ -10,6 +10,7 @@ const socket_io_1 = require("socket.io");
 const connection_1 = require("./db/connection");
 const routes_1 = __importDefault(require("./routes"));
 const services_1 = require("./services");
+const socket_1 = require("./socket");
 const PORT = process.env.PORT || 3001;
 // Initialize database
 (0, connection_1.initializeDatabase)();
@@ -24,6 +25,8 @@ const io = new socket_io_1.Server(httpServer, {
         methods: ['GET', 'POST'],
     },
 });
+// Make io available globally for beer updates
+(0, socket_1.setSocketIO)(io);
 // Middleware
 app.use((0, cors_1.default)({
     origin: ['http://localhost:5173', 'http://localhost:3000'],

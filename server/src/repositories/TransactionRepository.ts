@@ -1,27 +1,21 @@
 import { db } from '../db/connection';
 import type { Transaction } from 'shared';
 
+const SELECT_TRANSACTION = `
+  SELECT t.id, t.beer_id as beerId, b.name as beerName, t.quantity,
+         t.timestamp, t.unit_price as unitPrice, t.total_price as totalPrice
+  FROM transactions t
+  JOIN beers b ON t.beer_id = b.id
+`;
+
 export class TransactionRepository {
   getAll(): Transaction[] {
-    const stmt = db.prepare(`
-      SELECT t.id, t.beer_id as beerId, b.name as beerName, t.quantity,
-             t.timestamp, t.unit_price as unitPrice, t.total_price as totalPrice
-      FROM transactions t
-      JOIN beers b ON t.beer_id = b.id
-      ORDER BY t.timestamp DESC
-    `);
+    const stmt = db.prepare(`${SELECT_TRANSACTION} ORDER BY t.timestamp DESC`);
     return stmt.all() as Transaction[];
   }
 
   getRecent(limit: number = 50): Transaction[] {
-    const stmt = db.prepare(`
-      SELECT t.id, t.beer_id as beerId, b.name as beerName, t.quantity,
-             t.timestamp, t.unit_price as unitPrice, t.total_price as totalPrice
-      FROM transactions t
-      JOIN beers b ON t.beer_id = b.id
-      ORDER BY t.timestamp DESC
-      LIMIT ?
-    `);
+    const stmt = db.prepare(`${SELECT_TRANSACTION} ORDER BY t.timestamp DESC LIMIT ?`);
     return stmt.all(limit) as Transaction[];
   }
 
@@ -33,13 +27,7 @@ export class TransactionRepository {
     `);
     const result = stmt.run(beerId, quantity, unitPrice, totalPrice);
 
-    const getStmt = db.prepare(`
-      SELECT t.id, t.beer_id as beerId, b.name as beerName, t.quantity,
-             t.timestamp, t.unit_price as unitPrice, t.total_price as totalPrice
-      FROM transactions t
-      JOIN beers b ON t.beer_id = b.id
-      WHERE t.id = ?
-    `);
+    const getStmt = db.prepare(`${SELECT_TRANSACTION} WHERE t.id = ?`);
     return getStmt.get(result.lastInsertRowid) as Transaction;
   }
 
