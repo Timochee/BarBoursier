@@ -29,7 +29,7 @@ const httpServer = createServer(app);
 // Socket.io setup
 const io = new Server(httpServer, {
   cors: {
-    origin: [CLIENT_URL, 'http://localhost:3000'],
+    origin: true, // Allow all origins in development
     methods: ['GET', 'POST'],
   },
 });
@@ -39,7 +39,7 @@ setSocketIO(io);
 
 // Middleware
 app.use(cors({
-  origin: [CLIENT_URL, 'http://localhost:3000'],
+  origin: true, // Allow all origins in development
 }));
 app.use(express.json());
 app.use(passport.initialize());
@@ -85,8 +85,8 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start server
-httpServer.listen(PORT, () => {
+// Start server on all interfaces
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
 
