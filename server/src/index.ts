@@ -1,18 +1,26 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import passport from 'passport';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { initializeDatabase, closeDatabase } from './db/connection';
 import apiRoutes from './routes';
+import authRoutes from './routes/auth';
 import { marketService, chartDataService } from './services';
 import { setSocketIO } from './socket';
+import { configurePassport } from './middleware/auth';
 import type { BuyRequest } from 'shared';
 
 const PORT = process.env.PORT || 3001;
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 // Initialize database
 initializeDatabase();
 chartDataService.initializeHistory();
+
+// Configure Passport for Google OAuth
+configurePassport();
 
 // Create Express app
 const app = express();
@@ -21,7 +29,7 @@ const httpServer = createServer(app);
 // Socket.io setup
 const io = new Server(httpServer, {
   cors: {
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: [CLIENT_URL, 'http://localhost:3000'],
     methods: ['GET', 'POST'],
   },
 });
@@ -31,12 +39,14 @@ setSocketIO(io);
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: [CLIENT_URL, 'http://localhost:3000'],
 }));
 app.use(express.json());
+app.use(passport.initialize());
 
 // API routes
 app.use('/api', apiRoutes);
+app.use('/api/auth', authRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -2,9 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const services_1 = require("../services");
+const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-// POST /api/market/buy - Buy beer
-router.post('/buy', (req, res) => {
+// POST /api/market/buy - Buy beer (Admin only)
+router.post('/buy', auth_1.adminMiddleware, (req, res) => {
     const { beerId, quantity } = req.body;
     if (!beerId || !quantity || quantity < 1) {
         res.status(400).json({ error: 'Invalid request: beerId and quantity required' });
@@ -17,8 +18,8 @@ router.post('/buy', (req, res) => {
     }
     res.json(result);
 });
-// POST /api/market/reset - Reset market
-router.post('/reset', (req, res) => {
+// POST /api/market/reset - Reset market (Admin only)
+router.post('/reset', auth_1.adminMiddleware, (req, res) => {
     const beers = services_1.marketService.reset();
     res.json({ success: true, beers });
 });

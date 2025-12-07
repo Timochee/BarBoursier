@@ -1,43 +1,78 @@
-import { useState, useCallback } from 'react';
-
-const ADMIN_PASSWORD = 'admin'; // TODO: Move to environment variable
-const STORAGE_KEY = 'barboursier_admin';
+import { useState, useCallback, useEffect } from 'react';
+import { api, getToken, removeToken, handleAuthCallback, getGoogleAuthUrl, UserInfo } from '../services/api';
 
 export function useAdminMode() {
-  const [isAdmin, setIsAdmin] = useState(() => {
-    return sessionStorage.getItem(STORAGE_KEY) === 'true';
-  });
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [user, setUser] = useState<UserInfo | null>(null);
 
-  const login = useCallback((password: string): boolean => {
-    if (password === ADMIN_PASSWORD) {
-      setIsAdmin(true);
-      sessionStorage.setItem(STORAGE_KEY, 'true');
-      setShowLoginModal(false);
-      return true;
+  // Handle OAuth callback and verify token on mount
+  useEffect(() => {
+    // First, check for OAuth callback params in URL
+    const { token, error } = handleAuthCallback();
+
+    if (error) {
+      setAuthError(error);
+      setIsLoading(false);
+      return;
     }
-    return false;
+
+    // If we have a token (from callback or localStorage), verify it
+    const existingToken = token || getToken();
+    if (existingToken) {
+      api.verify()
+        .then((response) => {
+          setIsLoggedIn(response.valid);
+          setIsAdmin(response.valid && response.isAdmin);
+          if (response.user) {
+            setUser(response.user);
+          }
+        })
+        .catch(() => {
+          // Token invalid, remove it
+          removeToken();
+          setIsLoggedIn(false);
+          setIsAdmin(false);
+          setUser(null);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const login = useCallback(() => {
+    // Redirect to Google OAuth
+    window.location.href = getGoogleAuthUrl();
   }, []);
 
   const logout = useCallback(() => {
+    removeToken();
+    setIsLoggedIn(false);
     setIsAdmin(false);
-    sessionStorage.removeItem(STORAGE_KEY);
+    setUser(null);
+    // Optionally call the logout endpoint for logging
+    api.logout().catch(() => {
+      // Ignore errors on logout
+    });
   }, []);
 
-  const openLoginModal = useCallback(() => {
-    setShowLoginModal(true);
-  }, []);
-
-  const closeLoginModal = useCallback(() => {
-    setShowLoginModal(false);
+  const clearAuthError = useCallback(() => {
+    setAuthError(null);
   }, []);
 
   return {
     isAdmin,
-    showLoginModal,
+    isLoggedIn,
+    isLoading,
+    authError,
+    user,
     login,
     logout,
-    openLoginModal,
-    closeLoginModal,
+    clearAuthError,
   };
 }

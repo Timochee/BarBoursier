@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { marketService, chartDataService } from '../services';
+import { adminMiddleware } from '../middleware/auth';
 import type { BuyRequest } from 'shared';
 
 const router = Router();
 
-// POST /api/market/buy - Buy beer
-router.post('/buy', (req, res) => {
+// POST /api/market/buy - Buy beer (Admin only)
+router.post('/buy', adminMiddleware as any, (req, res) => {
   const { beerId, quantity } = req.body as BuyRequest;
 
   if (!beerId || !quantity || quantity < 1) {
@@ -23,8 +24,8 @@ router.post('/buy', (req, res) => {
   res.json(result);
 });
 
-// POST /api/market/reset - Reset market
-router.post('/reset', (req, res) => {
+// POST /api/market/reset - Reset market (Admin only)
+router.post('/reset', adminMiddleware as any, (req, res) => {
   const beers = marketService.reset();
   res.json({ success: true, beers });
 });

@@ -4,6 +4,7 @@ const express_1 = require("express");
 const shared_1 = require("shared");
 const repositories_1 = require("../repositories");
 const socket_1 = require("../socket");
+const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 // GET /api/beers - Get all beers
 router.get('/', (req, res) => {
@@ -30,8 +31,8 @@ router.get('/category/:category', (req, res) => {
     const beers = repositories_1.beerRepository.getByCategory(category);
     res.json(beers);
 });
-// POST /api/beers - Create a new beer
-router.post('/', (req, res) => {
+// POST /api/beers - Create a new beer (Admin only)
+router.post('/', auth_1.adminMiddleware, (req, res) => {
     const { name, basePrice, category, volatility } = req.body;
     // Validation
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -71,8 +72,8 @@ router.post('/', (req, res) => {
         res.status(500).json({ error: 'Failed to create beer' });
     }
 });
-// PUT /api/beers/:id - Update a beer
-router.put('/:id', (req, res) => {
+// PUT /api/beers/:id - Update a beer (Admin only)
+router.put('/:id', auth_1.adminMiddleware, (req, res) => {
     const id = parseInt(req.params.id, 10);
     const { name, basePrice, category, volatility } = req.body;
     const existing = repositories_1.beerRepository.getById(id);
@@ -118,8 +119,8 @@ router.put('/:id', (req, res) => {
         res.status(500).json({ error: 'Failed to update beer' });
     }
 });
-// DELETE /api/beers/:id - Delete a beer
-router.delete('/:id', (req, res) => {
+// DELETE /api/beers/:id - Delete a beer (Admin only)
+router.delete('/:id', auth_1.adminMiddleware, (req, res) => {
     const id = parseInt(req.params.id, 10);
     const existing = repositories_1.beerRepository.getById(id);
     if (!existing) {

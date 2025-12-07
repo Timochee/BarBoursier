@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { CATEGORIES, DEFAULT_SETTINGS } from 'shared';
 import { beerRepository } from '../repositories';
 import { emitBeersUpdated } from '../socket';
+import { adminMiddleware } from '../middleware/auth';
 
 const router = Router();
 
@@ -36,8 +37,8 @@ router.get('/category/:category', (req, res) => {
   res.json(beers);
 });
 
-// POST /api/beers - Create a new beer
-router.post('/', (req, res) => {
+// POST /api/beers - Create a new beer (Admin only)
+router.post('/', adminMiddleware as any, (req, res) => {
   const { name, basePrice, category, volatility } = req.body;
 
   // Validation
@@ -85,8 +86,8 @@ router.post('/', (req, res) => {
   }
 });
 
-// PUT /api/beers/:id - Update a beer
-router.put('/:id', (req, res) => {
+// PUT /api/beers/:id - Update a beer (Admin only)
+router.put('/:id', adminMiddleware as any, (req, res) => {
   const id = parseInt(req.params.id, 10);
   const { name, basePrice, category, volatility } = req.body;
 
@@ -141,8 +142,8 @@ router.put('/:id', (req, res) => {
   }
 });
 
-// DELETE /api/beers/:id - Delete a beer
-router.delete('/:id', (req, res) => {
+// DELETE /api/beers/:id - Delete a beer (Admin only)
+router.delete('/:id', adminMiddleware as any, (req, res) => {
   const id = parseInt(req.params.id, 10);
 
   const existing = beerRepository.getById(id);
