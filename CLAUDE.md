@@ -20,7 +20,7 @@ npm start            # Run production
 ## Tech Stack
 
 - **Frontend**: React 18 + TypeScript, Vite, TailwindCSS, Recharts, React Query, Socket.io-client
-- **Backend**: Node.js + Express + TypeScript, better-sqlite3, Socket.io
+- **Backend**: Node.js + Express + TypeScript, better-sqlite3, Socket.io, Passport.js (Google OAuth), JWT
 
 ## Architecture
 
@@ -37,6 +37,7 @@ barboursier/
 ├── server/                 # Express backend
 │   └── src/
 │       ├── db/             # Database connection and migrations
+│       ├── middleware/     # Auth middleware (JWT, Google OAuth)
 │       ├── repositories/   # Data access layer
 │       ├── routes/         # Express route handlers
 │       ├── services/       # Business logic
@@ -63,13 +64,21 @@ All types, constants, and pricing configuration are centralized:
 - **PriceHistoryRepository** - Price snapshots for charts
 - **SettingsRepository** - Dynamic settings storage
 
+### Backend Middleware (`middleware/auth.ts`)
+- **configurePassport()** - Sets up Google OAuth strategy
+- **authMiddleware** - Validates JWT, allows any authenticated user
+- **adminMiddleware** - Validates JWT, requires admin role (email in whitelist)
+- **generateToken(user)** - Creates JWT with user info and role
+- **isEmailAllowed(email)** - Checks if email is in ADMIN_EMAILS whitelist
+- **isOAuthConfigured()** - Checks if Google OAuth credentials are set
+
 ### Frontend Components
-- **BeerTable** - Main table with sorting, category filtering, buy actions
+- **BeerTable** - Main table with sorting, category filtering, buy actions (buy hidden for guests)
 - **PriceChart** - Recharts line chart (by sector or by beer view)
-- **BeerManagement** - Modal container for beer CRUD
+- **BeerManagement** - Modal container for beer CRUD (admin only)
   - **BeerForm** - Add/edit beer form
   - **BeerListItem** - Individual beer row in manage list
-- **TransactionHistory** - Modal showing purchase history
+- **TransactionHistory** - Modal showing purchase history (admin only)
 - **ImpactDialog** - Shows price impact after purchase
 - **ConfirmDialog** - Reusable confirmation modal
 - **Toast/ToastContainer** - Toast notification system
@@ -78,6 +87,7 @@ All types, constants, and pricing configuration are centralized:
 
 ### Frontend Hooks
 - **useMarket** - Market state management via Socket.io (beers, stats, chart data, buy, reset)
+- **useAdminMode** - Authentication state (isLoggedIn, isAdmin, user, login, logout)
 - **useBeerSort** - Beer sorting and filtering logic (extracted from BeerTable)
 - **useToast** - Toast notifications (success, error, warning, info)
 - **useTheme** - Dark/light theme support
@@ -87,23 +97,59 @@ All types, constants, and pricing configuration are centralized:
 - **utils/colors.ts** - Beer color mapping for charts
 - **utils/styles.ts** - Centralized category styles and default volatility values
 
+### Frontend Services (`services/api.ts`)
+- **Token management**: getToken(), setToken(), removeToken()
+- **handleAuthCallback()** - Handles OAuth redirect, extracts token from URL
+- **getGoogleAuthUrl()** - Returns Google OAuth initiation URL
+- **api.verify()** - Verifies JWT token, returns { valid, isAdmin, user }
+- **api.logout()** - Logout endpoint
+
+## Authentication & Authorization
+
+### User Roles
+| Role | Description | Capabilities |
+|------|-------------|--------------|
+| Guest | Not logged in | View prices, view chart |
+| User | Logged in, email NOT in whitelist | View prices, view chart, see own profile |
+| Admin | Logged in, email in ADMIN_EMAILS | Full access: buy, reset, manage beers, view history |
+
+### Auth Flow
+1. User clicks "Login" → redirects to Google OAuth
+2. Google authenticates → redirects to `/api/auth/google/callback`
+3. Server validates, generates JWT with `{ email, name, picture, role }`
+4. Client stores JWT in localStorage
+5. All API requests include `Authorization: Bearer <token>`
+6. Server validates JWT signature and checks role for protected routes
+
+### Environment Variables
+```env
+GOOGLE_CLIENT_ID=...        # From Google Cloud Console
+GOOGLE_CLIENT_SECRET=...    # From Google Cloud Console
+ADMIN_EMAILS=a@x.com,b@y.com  # Comma-separated admin emails
+JWT_SECRET=...              # Secret for signing JWTs
+PORT=3001                   # Server port
+CLIENT_URL=http://localhost:5173  # For OAuth redirect
+```
+
 ## UI/UX Features
 
-### Header Actions (left to right)
+### Header Actions (left to right, admin only except last two)
 1. **Beers** - Open beer management modal
 2. **History** - Open transaction history
 3. **Keep Qty** - Toggle: keep quantity after purchase (amber when active)
 4. **Impact** - Toggle: show impact dialog after purchase (green when active)
 5. **Reset** - Reset market (red, with confirmation dialog)
-6. **Live/Offline** - Connection status indicator
-7. **Theme toggle** - Dark/light mode switch
+6. **Live/Offline** - Connection status indicator (always visible)
+7. **User/Login** - Shows user photo+name if logged in, or Google login button
+8. **Theme toggle** - Dark/light mode switch (always visible)
 
 ### Beer Market Section
+- **Search input** - Filter beers by name or category
 - **Category filter badges** - Click to filter table by category (Clear button appears on left)
 - **Sortable columns** - Category, Name, Base price, Current price, Change %
 - **Category badges** - Only shown for first beer in consecutive category group
-- **Quantity input** - Per-beer quantity selector
-- **Buy button** - With loading spinner and cooldown
+- **Quantity input** - Per-beer quantity selector (admin only)
+- **Buy button** - With loading spinner and cooldown (admin only)
 
 ### Price Chart
 - **View modes** - By Sector / By Beer toggle
@@ -197,18 +243,25 @@ Sector Matrix (row buys → column decreases):
 
 ## API Structure
 
+### Authentication
+- `GET /api/auth/google` - Initiate Google OAuth
+- `GET /api/auth/google/callback` - OAuth callback (redirects to client with token)
+- `GET /api/auth/verify` - Verify JWT token, returns `{ valid, isAdmin, user }`
+- `POST /api/auth/logout` - Logout (client-side token removal)
+- `GET /api/auth/status` - Check if OAuth is configured
+
 ### Beers
 - `GET /api/beers` - All beers
 - `GET /api/beers/:id` - Single beer
 - `GET /api/beers/category/:category` - Beers by category
 - `GET /api/beers/categories` - List of categories
-- `POST /api/beers` - Create beer `{ name, basePrice, category, volatility }`
-- `PUT /api/beers/:id` - Update beer
-- `DELETE /api/beers/:id` - Delete beer
+- `POST /api/beers` - Create beer (Admin) `{ name, basePrice, category, volatility }`
+- `PUT /api/beers/:id` - Update beer (Admin)
+- `DELETE /api/beers/:id` - Delete beer (Admin)
 
 ### Market
-- `POST /api/market/buy` - Buy beer `{ beerId, quantity }`
-- `POST /api/market/reset` - Reset market
+- `POST /api/market/buy` - Buy beer (Admin) `{ beerId, quantity }`
+- `POST /api/market/reset` - Reset market (Admin)
 - `GET /api/market/total` - Market stats
 - `GET /api/market/chart-data` - Chart data
 

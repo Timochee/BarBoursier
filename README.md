@@ -168,7 +168,3 @@ The pricing algorithm ensures a **zero-sum market**:
 | Abbey | Leffe, Grimbergen, Affligem | Medium (0.32-0.38) |
 | Trappist | Chimay, Orval, Westmalle, Rochefort | High (0.45-0.55) |
 | Specialty | Duvel, Delirium, Kwak, Chouffe | High (0.40-0.50) |
-
-## License
-
-MIT
