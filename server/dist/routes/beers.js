@@ -32,8 +32,8 @@ router.get('/category/:category', (req, res) => {
     const beers = repositories_1.beerRepository.getByCategory(category);
     res.json(beers);
 });
-// POST /api/beers - Create a new beer (Admin only)
-router.post('/', auth_1.adminMiddleware, (req, res) => {
+// POST /api/beers - Create a new beer (Superadmin only)
+router.post('/', auth_1.superadminMiddleware, (req, res) => {
     const { name, basePrice, category, volatility } = req.body;
     // Validation
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -73,8 +73,8 @@ router.post('/', auth_1.adminMiddleware, (req, res) => {
         res.status(500).json({ error: 'Failed to create beer' });
     }
 });
-// PUT /api/beers/:id - Update a beer (Admin only)
-router.put('/:id', auth_1.adminMiddleware, (req, res) => {
+// PUT /api/beers/:id - Update a beer (Superadmin only)
+router.put('/:id', auth_1.superadminMiddleware, (req, res) => {
     const id = parseInt(req.params.id, 10);
     const { name, basePrice, category, volatility } = req.body;
     const existing = repositories_1.beerRepository.getById(id);
@@ -120,8 +120,8 @@ router.put('/:id', auth_1.adminMiddleware, (req, res) => {
         res.status(500).json({ error: 'Failed to update beer' });
     }
 });
-// DELETE /api/beers/:id - Delete a beer (Admin only)
-router.delete('/:id', auth_1.adminMiddleware, (req, res) => {
+// DELETE /api/beers/:id - Delete a beer (Superadmin only)
+router.delete('/:id', auth_1.superadminMiddleware, (req, res) => {
     const id = parseInt(req.params.id, 10);
     const existing = repositories_1.beerRepository.getById(id);
     if (!existing) {

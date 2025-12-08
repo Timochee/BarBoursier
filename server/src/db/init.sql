@@ -60,6 +60,16 @@ CREATE TABLE IF NOT EXISTS admins (
     added_by TEXT NOT NULL
 );
 
+-- Presets table (beer sets for different bars)
+CREATE TABLE IF NOT EXISTS presets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    beers TEXT NOT NULL, -- JSON array of beer definitions
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_by TEXT NOT NULL
+);
+
 -- Insert default beers (prices in 0.25€ increments)
 INSERT OR IGNORE INTO beers (name, base_price, current_price, category, volatility) VALUES
     -- Pils (low volatility)

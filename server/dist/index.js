@@ -105,7 +105,7 @@ io.on('connection', (socket) => {
             socket.emit('purchaseResult', result);
         }
     });
-    // Authenticated reset event - requires admin role
+    // Authenticated reset event - requires superadmin role
     socket.on('reset', (data) => {
         const token = data?.token;
         if (!token) {
@@ -113,8 +113,8 @@ io.on('connection', (socket) => {
             return;
         }
         const user = (0, auth_2.verifySocketToken)(token);
-        if (!user || !(0, auth_2.isAdminOrAbove)(user.role)) {
-            socket.emit('error', { message: 'Admin access required' });
+        if (!user || user.role !== 'superadmin') {
+            socket.emit('error', { message: 'Superadmin access required' });
             return;
         }
         logger_1.logger.info({ user: user.email }, 'Market reset');

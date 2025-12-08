@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useTheme, useMarket, useToast, useAdminMode, useAdmins } from './hooks';
+import { useTheme, useMarket, useToast, useAdminMode, useAdmins, usePresets } from './hooks';
 import {
   Header,
   BeerTable,
@@ -13,6 +13,7 @@ import {
   ConfirmDialog,
   BeerManagement,
   AdminManagement,
+  PresetManagement,
 } from './components';
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ function AppContent() {
   const { toasts, removeToast, success, error, warning } = useToast();
   const { isAdmin, isSuperadmin, isLoggedIn, isLoading: isAuthLoading, authError, user, login, logout, clearAuthError } = useAdminMode();
   const { admins, isLoading: isAdminsLoading, addAdmin, removeAdmin, error: adminsError, clearError: clearAdminsError } = useAdmins(isSuperadmin);
+  const { presets, isLoading: isPresetsLoading, saveCurrent: saveCurrentPreset, loadPreset, deletePreset } = usePresets();
 
   // Show admins error if present
   useEffect(() => {
@@ -62,6 +64,7 @@ function AppContent() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showBeerManagement, setShowBeerManagement] = useState(false);
   const [showAdminManagement, setShowAdminManagement] = useState(false);
+  const [showPresetManagement, setShowPresetManagement] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [showImpactOnBuy, setShowImpactOnBuy] = useState(() => {
     return localStorage.getItem('showImpactOnBuy') !== 'false';
@@ -122,6 +125,7 @@ function AppContent() {
         onToggleTheme={toggleTheme}
         onShowBeerManagement={() => setShowBeerManagement(true)}
         onShowHistory={() => setShowHistory(true)}
+        onShowPresets={() => setShowPresetManagement(true)}
         onShowAdminManagement={() => setShowAdminManagement(true)}
         onReset={handleReset}
         keepQuantity={keepQuantity}
@@ -301,6 +305,23 @@ function AppContent() {
           onClose={() => setShowAdminManagement(false)}
           onAdd={addAdmin}
           onRemove={removeAdmin}
+          onSuccess={(msg) => {
+            success(msg);
+          }}
+          onError={(msg) => {
+            error(msg);
+          }}
+        />
+      )}
+
+      {showPresetManagement && (
+        <PresetManagement
+          presets={presets}
+          isLoading={isPresetsLoading}
+          onClose={() => setShowPresetManagement(false)}
+          onSaveCurrent={saveCurrentPreset}
+          onLoad={loadPreset}
+          onDelete={deletePreset}
           onSuccess={(msg) => {
             success(msg);
           }}

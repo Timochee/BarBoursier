@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { marketService, chartDataService } from '../services';
-import { adminMiddleware } from '../middleware/auth';
+import { adminMiddleware, superadminMiddleware } from '../middleware/auth';
 import type { BuyRequest } from 'shared';
 
 const router = Router();
@@ -24,8 +24,8 @@ router.post('/buy', adminMiddleware as any, (req, res) => {
   res.json(result);
 });
 
-// POST /api/market/reset - Reset market (Admin only)
-router.post('/reset', adminMiddleware as any, (req, res) => {
+// POST /api/market/reset - Reset market (Superadmin only)
+router.post('/reset', superadminMiddleware as any, (req, res) => {
   const beers = marketService.reset();
   res.json({ success: true, beers });
 });

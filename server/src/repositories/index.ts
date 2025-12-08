@@ -3,3 +3,4 @@ export { transactionRepository, TransactionRepository } from './TransactionRepos
 export { priceHistoryRepository, PriceHistoryRepository } from './PriceHistoryRepository';
 export { settingsRepository, SettingsRepository } from './SettingsRepository';
 export { adminRepository, AdminRepository } from './AdminRepository';
+export { presetRepository, PresetRepository } from './PresetRepository';

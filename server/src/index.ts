@@ -121,7 +121,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Authenticated reset event - requires admin role
+    // Authenticated reset event - requires superadmin role
     socket.on('reset', (data?: { token?: string }) => {
         const token = data?.token;
 
@@ -131,8 +131,8 @@ io.on('connection', (socket) => {
         }
 
         const user = verifySocketToken(token);
-        if (!user || !isAdminOrAbove(user.role)) {
-            socket.emit('error', { message: 'Admin access required' });
+        if (!user || user.role !== 'superadmin') {
+            socket.emit('error', { message: 'Superadmin access required' });
             return;
         }
 

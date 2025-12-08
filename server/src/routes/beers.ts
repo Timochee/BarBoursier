@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { CATEGORIES, DEFAULT_SETTINGS, VALIDATION } from 'shared';
 import { beerRepository } from '../repositories';
 import { emitBeersUpdated } from '../socket';
-import { adminMiddleware } from '../middleware/auth';
+import { superadminMiddleware } from '../middleware/auth';
 import { logger } from '../logger';
 
 const router = Router();
@@ -38,8 +38,8 @@ router.get('/category/:category', (req, res) => {
   res.json(beers);
 });
 
-// POST /api/beers - Create a new beer (Admin only)
-router.post('/', adminMiddleware as any, (req, res) => {
+// POST /api/beers - Create a new beer (Superadmin only)
+router.post('/', superadminMiddleware as any, (req, res) => {
   const { name, basePrice, category, volatility } = req.body;
 
   // Validation
@@ -87,8 +87,8 @@ router.post('/', adminMiddleware as any, (req, res) => {
   }
 });
 
-// PUT /api/beers/:id - Update a beer (Admin only)
-router.put('/:id', adminMiddleware as any, (req, res) => {
+// PUT /api/beers/:id - Update a beer (Superadmin only)
+router.put('/:id', superadminMiddleware as any, (req, res) => {
   const id = parseInt(req.params.id, 10);
   const { name, basePrice, category, volatility } = req.body;
 
@@ -143,8 +143,8 @@ router.put('/:id', adminMiddleware as any, (req, res) => {
   }
 });
 
-// DELETE /api/beers/:id - Delete a beer (Admin only)
-router.delete('/:id', adminMiddleware as any, (req, res) => {
+// DELETE /api/beers/:id - Delete a beer (Superadmin only)
+router.delete('/:id', superadminMiddleware as any, (req, res) => {
   const id = parseInt(req.params.id, 10);
 
   const existing = beerRepository.getById(id);

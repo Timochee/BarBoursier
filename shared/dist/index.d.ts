@@ -67,6 +67,20 @@ export interface Admin {
     addedAt: string;
     addedBy: string;
 }
+export interface BeerDefinition {
+    name: string;
+    basePrice: number;
+    category: string;
+    volatility: number;
+}
+export interface Preset {
+    id: number;
+    name: string;
+    description?: string;
+    beers: BeerDefinition[];
+    createdAt: string;
+    createdBy: string;
+}
 export declare const BUY_COOLDOWN_MS = 300;
 export declare const DEFAULT_TRANSACTION_LIMIT = 50;
 export declare const DEFAULT_PRICE_HISTORY_LIMIT = 100;

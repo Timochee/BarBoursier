@@ -105,6 +105,23 @@ export interface Admin {
   addedBy: string;
 }
 
+// Beer definition for presets (without id and currentPrice)
+export interface BeerDefinition {
+  name: string;
+  basePrice: number;
+  category: string;
+  volatility: number;
+}
+
+export interface Preset {
+  id: number;
+  name: string;
+  description?: string;
+  beers: BeerDefinition[];
+  createdAt: string;
+  createdBy: string;
+}
+
 // UI constants
 export const BUY_COOLDOWN_MS = 300;
 export const DEFAULT_TRANSACTION_LIMIT = 50;

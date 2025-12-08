@@ -31,6 +31,7 @@ interface HeaderProps {
   // Admin actions
   onShowBeerManagement: () => void;
   onShowHistory: () => void;
+  onShowPresets: () => void;
   onShowAdminManagement: () => void;
   onReset: () => void;
 
@@ -56,6 +57,7 @@ export function Header({
   onToggleTheme,
   onShowBeerManagement,
   onShowHistory,
+  onShowPresets,
   onShowAdminManagement,
   onReset,
   keepQuantity,
@@ -116,18 +118,20 @@ export function Header({
             {/* Admin Actions */}
             {isAdmin && (
               <>
-                <Tooltip content="Add, edit or remove beers">
-                  <button
-                    onClick={onShowBeerManagement}
-                    className="btn btn-ghost flex items-center gap-2"
-                    style={{ color: 'var(--text-primary)' }}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span className="hidden sm:inline">Beers</span>
-                  </button>
-                </Tooltip>
+                {isSuperadmin && (
+                  <Tooltip content="Add, edit or remove beers">
+                    <button
+                      onClick={onShowBeerManagement}
+                      className="btn btn-ghost flex items-center gap-2"
+                      style={{ color: 'var(--text-primary)' }}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <span className="hidden sm:inline">Beers</span>
+                    </button>
+                  </Tooltip>
+                )}
                 <Tooltip content="View transaction history">
                   <button
                     onClick={onShowHistory}
@@ -140,6 +144,19 @@ export function Header({
                     <span className="hidden sm:inline">History</span>
                   </button>
                 </Tooltip>
+                {isSuperadmin && (
+                  <Tooltip content="Save and load beer presets">
+                    <button
+                      onClick={onShowPresets}
+                      className="btn btn-ghost flex items-center gap-2 text-cyan-400"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                      <span className="hidden sm:inline">Presets</span>
+                    </button>
+                  </Tooltip>
+                )}
                 {isSuperadmin && (
                   <Tooltip content="Manage admin users">
                     <button
@@ -186,18 +203,20 @@ export function Header({
 
                 <Separator />
 
-                {/* Reset */}
-                <Tooltip content="Reset all prices to base values">
-                  <button
-                    onClick={onReset}
-                    className="btn btn-ghost flex items-center gap-2 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span className="hidden sm:inline">Reset</span>
-                  </button>
-                </Tooltip>
+                {/* Reset - Superadmin only */}
+                {isSuperadmin && (
+                  <Tooltip content="Reset all prices to base values">
+                    <button
+                      onClick={onReset}
+                      className="btn btn-ghost flex items-center gap-2 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span className="hidden sm:inline">Reset</span>
+                    </button>
+                  </Tooltip>
+                )}
 
                 <Separator />
               </>

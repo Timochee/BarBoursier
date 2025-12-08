@@ -1,4 +1,4 @@
-import type { Beer, Transaction, MarketStats, ChartData, PurchaseResult, BuyRequest, Admin, Role } from 'shared';
+import type { Beer, Transaction, MarketStats, ChartData, PurchaseResult, BuyRequest, Admin, Role, Preset, BeerDefinition } from 'shared';
 
 const API_BASE = '/api';
 const TOKEN_KEY = 'barboursier_token';
@@ -158,6 +158,33 @@ export const api = {
     }),
   removeAdmin: (id: number) =>
     fetchJson<{ success: boolean }>(`/admins/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Presets
+  getPresets: () => fetchJson<Preset[]>('/presets'),
+  getPreset: (id: number) => fetchJson<Preset>(`/presets/${id}`),
+  createPreset: (name: string, description: string | undefined, beers: BeerDefinition[]) =>
+    fetchJson<Preset>('/presets', {
+      method: 'POST',
+      body: JSON.stringify({ name, description, beers }),
+    }),
+  saveCurrentAsPreset: (name: string, description?: string) =>
+    fetchJson<Preset>('/presets/save-current', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    }),
+  loadPreset: (id: number) =>
+    fetchJson<{ success: boolean; beers: Beer[] }>(`/presets/${id}/load`, {
+      method: 'POST',
+    }),
+  updatePreset: (id: number, data: { name?: string; description?: string; beers?: BeerDefinition[] }) =>
+    fetchJson<Preset>(`/presets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deletePreset: (id: number) =>
+    fetchJson<{ success: boolean }>(`/presets/${id}`, {
       method: 'DELETE',
     }),
 };

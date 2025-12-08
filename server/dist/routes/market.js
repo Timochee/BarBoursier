@@ -18,8 +18,8 @@ router.post('/buy', auth_1.adminMiddleware, (req, res) => {
     }
     res.json(result);
 });
-// POST /api/market/reset - Reset market (Admin only)
-router.post('/reset', auth_1.adminMiddleware, (req, res) => {
+// POST /api/market/reset - Reset market (Superadmin only)
+router.post('/reset', auth_1.superadminMiddleware, (req, res) => {
     const beers = services_1.marketService.reset();
     res.json({ success: true, beers });
 });
