@@ -8,6 +8,7 @@ export type { ToastMessage, ToastType } from './Toast';
 export { Skeleton, BeerTableSkeleton, ChartSkeleton, StatsSkeleton } from './Skeleton';
 export { ConfirmDialog } from './ConfirmDialog';
 export { BeerManagement } from './BeerManagement';
+export { AdminManagement } from './AdminManagement';
 export { Tooltip } from './Tooltip';
 export { Modal, ModalHeader, ModalFooter, useModalKeyboard } from './Modal';
 export { Header } from './Header';

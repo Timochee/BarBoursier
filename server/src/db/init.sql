@@ -51,6 +51,15 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
     ('min_price', 0.50),
     ('max_price', 25.00);
 
+-- Admins table (superadmin defined in env, admins stored here)
+CREATE TABLE IF NOT EXISTS admins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    added_at TEXT NOT NULL DEFAULT (datetime('now')),
+    added_by TEXT NOT NULL
+);
+
 -- Insert default beers (prices in 0.25€ increments)
 INSERT OR IGNORE INTO beers (name, base_price, current_price, category, volatility) VALUES
     -- Pils (low volatility)

@@ -1,4 +1,4 @@
-import type { Beer, Transaction, MarketStats, ChartData, PurchaseResult, BuyRequest } from 'shared';
+import type { Beer, Transaction, MarketStats, ChartData, PurchaseResult, BuyRequest, Admin, Role } from 'shared';
 
 const API_BASE = '/api';
 const TOKEN_KEY = 'barboursier_token';
@@ -25,11 +25,14 @@ export interface UserInfo {
   email: string;
   name: string;
   picture: string;
+  role: Role;
 }
 
 export interface VerifyResponse {
   valid: boolean;
   isAdmin: boolean;
+  isSuperadmin: boolean;
+  role: Role;
   user?: UserInfo;
 }
 
@@ -145,4 +148,16 @@ export const api = {
   getTransactions: (limit?: number) =>
     fetchJson<Transaction[]>(`/transactions${limit ? `?limit=${limit}` : ''}`),
   getTransactionCount: () => fetchJson<{ count: number }>('/transactions/count'),
+
+  // Admins
+  getAdmins: () => fetchJson<Admin[]>('/admins'),
+  addAdmin: (email: string, name: string) =>
+    fetchJson<Admin>('/admins', {
+      method: 'POST',
+      body: JSON.stringify({ email, name }),
+    }),
+  removeAdmin: (id: number) =>
+    fetchJson<{ success: boolean }>(`/admins/${id}`, {
+      method: 'DELETE',
+    }),
 };

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SettingsRepository = exports.settingsRepository = exports.PriceHistoryRepository = exports.priceHistoryRepository = exports.TransactionRepository = exports.transactionRepository = exports.BeerRepository = exports.beerRepository = void 0;
+exports.AdminRepository = exports.adminRepository = exports.SettingsRepository = exports.settingsRepository = exports.PriceHistoryRepository = exports.priceHistoryRepository = exports.TransactionRepository = exports.transactionRepository = exports.BeerRepository = exports.beerRepository = void 0;
 var BeerRepository_1 = require("./BeerRepository");
 Object.defineProperty(exports, "beerRepository", { enumerable: true, get: function () { return BeerRepository_1.beerRepository; } });
 Object.defineProperty(exports, "BeerRepository", { enumerable: true, get: function () { return BeerRepository_1.BeerRepository; } });
@@ -13,3 +13,6 @@ Object.defineProperty(exports, "PriceHistoryRepository", { enumerable: true, get
 var SettingsRepository_1 = require("./SettingsRepository");
 Object.defineProperty(exports, "settingsRepository", { enumerable: true, get: function () { return SettingsRepository_1.settingsRepository; } });
 Object.defineProperty(exports, "SettingsRepository", { enumerable: true, get: function () { return SettingsRepository_1.SettingsRepository; } });
+var AdminRepository_1 = require("./AdminRepository");
+Object.defineProperty(exports, "adminRepository", { enumerable: true, get: function () { return AdminRepository_1.adminRepository; } });
+Object.defineProperty(exports, "AdminRepository", { enumerable: true, get: function () { return AdminRepository_1.AdminRepository; } });

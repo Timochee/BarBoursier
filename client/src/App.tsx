@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useTheme, useMarket, useToast, useAdminMode } from './hooks';
+import { useTheme, useMarket, useToast, useAdminMode, useAdmins } from './hooks';
 import {
   Header,
   BeerTable,
@@ -12,6 +12,7 @@ import {
   ChartSkeleton,
   ConfirmDialog,
   BeerManagement,
+  AdminManagement,
 } from './components';
 
 const queryClient = new QueryClient();
@@ -19,7 +20,16 @@ const queryClient = new QueryClient();
 function AppContent() {
   const { theme, toggleTheme } = useTheme();
   const { toasts, removeToast, success, error, warning } = useToast();
-  const { isAdmin, isLoggedIn, isLoading: isAuthLoading, authError, user, login, logout, clearAuthError } = useAdminMode();
+  const { isAdmin, isSuperadmin, isLoggedIn, isLoading: isAuthLoading, authError, user, login, logout, clearAuthError } = useAdminMode();
+  const { admins, isLoading: isAdminsLoading, addAdmin, removeAdmin, error: adminsError, clearError: clearAdminsError } = useAdmins(isSuperadmin);
+
+  // Show admins error if present
+  useEffect(() => {
+    if (adminsError) {
+      error(adminsError);
+      clearAdminsError();
+    }
+  }, [adminsError, error, clearAdminsError]);
 
   // Show auth error if present
   useEffect(() => {
@@ -51,6 +61,7 @@ function AppContent() {
   const [showImpact, setShowImpact] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showBeerManagement, setShowBeerManagement] = useState(false);
+  const [showAdminManagement, setShowAdminManagement] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [showImpactOnBuy, setShowImpactOnBuy] = useState(() => {
     return localStorage.getItem('showImpactOnBuy') !== 'false';
@@ -101,6 +112,7 @@ function AppContent() {
         isLoading={isLoading}
         isConnected={isConnected}
         isAdmin={isAdmin}
+        isSuperadmin={isSuperadmin}
         isLoggedIn={isLoggedIn}
         isAuthLoading={isAuthLoading}
         user={user}
@@ -110,6 +122,7 @@ function AppContent() {
         onToggleTheme={toggleTheme}
         onShowBeerManagement={() => setShowBeerManagement(true)}
         onShowHistory={() => setShowHistory(true)}
+        onShowAdminManagement={() => setShowAdminManagement(true)}
         onReset={handleReset}
         keepQuantity={keepQuantity}
         showImpactOnBuy={showImpactOnBuy}
@@ -271,6 +284,23 @@ function AppContent() {
         <BeerManagement
           beers={beers}
           onClose={() => setShowBeerManagement(false)}
+          onSuccess={(msg) => {
+            success(msg);
+          }}
+          onError={(msg) => {
+            error(msg);
+          }}
+        />
+      )}
+
+      {showAdminManagement && user && (
+        <AdminManagement
+          admins={admins}
+          isLoading={isAdminsLoading}
+          currentUserEmail={user.email}
+          onClose={() => setShowAdminManagement(false)}
+          onAdd={addAdmin}
+          onRemove={removeAdmin}
           onSuccess={(msg) => {
             success(msg);
           }}

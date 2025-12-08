@@ -3,6 +3,7 @@ import { api, getToken, removeToken, handleAuthCallback, getGoogleAuthUrl, UserI
 
 export function useAdminMode() {
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -26,6 +27,7 @@ export function useAdminMode() {
         .then((response) => {
           setIsLoggedIn(response.valid);
           setIsAdmin(response.valid && response.isAdmin);
+          setIsSuperadmin(response.valid && response.isSuperadmin);
           if (response.user) {
             setUser(response.user);
           }
@@ -35,6 +37,7 @@ export function useAdminMode() {
           removeToken();
           setIsLoggedIn(false);
           setIsAdmin(false);
+          setIsSuperadmin(false);
           setUser(null);
         })
         .finally(() => {
@@ -54,6 +57,7 @@ export function useAdminMode() {
     removeToken();
     setIsLoggedIn(false);
     setIsAdmin(false);
+    setIsSuperadmin(false);
     setUser(null);
     // Optionally call the logout endpoint for logging
     api.logout().catch(() => {
@@ -67,6 +71,7 @@ export function useAdminMode() {
 
   return {
     isAdmin,
+    isSuperadmin,
     isLoggedIn,
     isLoading,
     authError,

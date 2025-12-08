@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import passport from 'passport';
-import { generateToken, authMiddleware, AuthRequest, isOAuthConfigured } from '../middleware/auth';
+import { generateToken, authMiddleware, AuthRequest, isOAuthConfigured, isAdminOrAbove } from '../middleware/auth';
 import { logger } from '../logger';
 
 const router = Router();
@@ -50,8 +50,15 @@ router.get('/google/callback', (req: Request, res: Response, next: NextFunction)
 });
 
 // GET /api/auth/verify - Verify if token is still valid
-router.get('/verify', authMiddleware as any, (req: AuthRequest, res: Response) => {
-  res.json({ valid: true, isAdmin: req.isAdmin, user: req.adminUser });
+router.get('/verify', authMiddleware as any, (req, res) => {
+  const authReq = req as AuthRequest;
+  res.json({
+    valid: true,
+    isAdmin: isAdminOrAbove(authReq.user!.role),
+    isSuperadmin: authReq.user!.role === 'superadmin',
+    role: authReq.user!.role,
+    user: authReq.user
+  });
 });
 
 // POST /api/auth/logout - Logout (client-side token removal, but useful for logging)

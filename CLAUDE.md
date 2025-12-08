@@ -118,22 +118,27 @@ All types, constants, and pricing configuration are centralized:
 | Role | Description | Capabilities |
 |------|-------------|--------------|
 | Guest | Not logged in | View prices, view chart |
-| User | Logged in, email NOT in whitelist | View prices, view chart, see own profile |
-| Admin | Logged in, email in ADMIN_EMAILS | Full access: buy, reset, manage beers, view history |
+| Admin | Email in admins table | Buy, reset, manage beers, view history |
+| Superadmin | Email matches SUPERADMIN_EMAIL | All admin + manage other admins |
 
 ### Auth Flow
 1. User clicks "Login" → redirects to Google OAuth
 2. Google authenticates → redirects to `/api/auth/google/callback`
-3. Server validates, generates JWT with `{ email, name, picture, role }`
+3. Server validates, generates JWT with `{ email, name, picture }`
 4. Client stores JWT in localStorage
 5. All API requests include `Authorization: Bearer <token>`
-6. Server validates JWT signature and checks role for protected routes
+6. Server validates JWT and checks role from DB (admins table) or env (superadmin)
+
+### Role Hierarchy
+- **Superadmin**: Defined in `.env` via `SUPERADMIN_EMAIL`
+- **Admin**: Stored in SQLite `admins` table, managed by superadmin via UI
+- **Guest**: Any other logged-in user
 
 ### Environment Variables
 ```env
 GOOGLE_CLIENT_ID=...           # From Google Cloud Console
 GOOGLE_CLIENT_SECRET=...       # From Google Cloud Console
-ADMIN_EMAILS=a@x.com,b@y.com   # Comma-separated admin emails
+SUPERADMIN_EMAIL=you@email.com # Single superadmin email
 JWT_SECRET=...                 # Secret for signing JWTs
 PORT=3001                      # Server port
 CLIENT_URL=http://localhost:5173  # For OAuth redirect
@@ -283,6 +288,11 @@ Sector Matrix (row buys → column decreases):
 ### Transactions
 - `GET /api/transactions` - Transaction history (optional `?limit=N`)
 - `GET /api/transactions/count` - Transaction count
+
+### Admins
+- `GET /api/admins` - List all admins (Superadmin)
+- `POST /api/admins` - Add admin (Superadmin) `{ email, name }`
+- `DELETE /api/admins/:id` - Remove admin (Superadmin, or admin removing self)
 
 ## WebSocket Events
 

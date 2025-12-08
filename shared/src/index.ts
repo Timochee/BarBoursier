@@ -86,6 +86,25 @@ export const SECTOR_MATRIX: Record<string, Record<string, number>> = {
 export const CATEGORIES = ['pils', 'abbey', 'trappist', 'specialty'] as const;
 export type Category = typeof CATEGORIES[number];
 
+// User roles
+export const ROLES = ['guest', 'admin', 'superadmin'] as const;
+export type Role = typeof ROLES[number];
+
+export interface User {
+  email: string;
+  name: string;
+  picture?: string;
+  role: Role;
+}
+
+export interface Admin {
+  id: number;
+  email: string;
+  name: string;
+  addedAt: string;
+  addedBy: string;
+}
+
 // UI constants
 export const BUY_COOLDOWN_MS = 300;
 export const DEFAULT_TRANSACTION_LIMIT = 50;

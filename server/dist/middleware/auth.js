@@ -3,21 +3,35 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isEmailAllowed = isEmailAllowed;
+exports.getUserRole = getUserRole;
+exports.isAdminOrAbove = isAdminOrAbove;
 exports.isOAuthConfigured = isOAuthConfigured;
 exports.configurePassport = configurePassport;
 exports.authMiddleware = authMiddleware;
 exports.adminMiddleware = adminMiddleware;
+exports.superadminMiddleware = superadminMiddleware;
 exports.generateToken = generateToken;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const passport_1 = __importDefault(require("passport"));
 const passport_google_oauth20_1 = require("passport-google-oauth20");
 const logger_1 = require("../logger");
+const repositories_1 = require("../repositories");
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
-// Check if email is in the admin whitelist
-function isEmailAllowed(email) {
-    return ADMIN_EMAILS.includes(email.toLowerCase());
+const SUPERADMIN_EMAIL = (process.env.SUPERADMIN_EMAIL || '').trim().toLowerCase();
+// Get user role based on email
+function getUserRole(email) {
+    const normalizedEmail = email.toLowerCase();
+    if (normalizedEmail === SUPERADMIN_EMAIL) {
+        return 'superadmin';
+    }
+    if (repositories_1.adminRepository.isAdmin(normalizedEmail)) {
+        return 'admin';
+    }
+    return 'guest';
+}
+// Check if user has at least admin privileges
+function isAdminOrAbove(role) {
+    return role === 'admin' || role === 'superadmin';
 }
 // Check if OAuth credentials are properly configured
 function isOAuthConfigured() {
@@ -30,7 +44,6 @@ function configurePassport() {
     const clientID = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const serverPort = process.env.PORT || '3001';
-    // In development, callback goes to server directly; in production, adjust as needed
     const callbackURL = process.env.OAUTH_CALLBACK_URL || `http://localhost:${serverPort}/api/auth/google/callback`;
     if (!isOAuthConfigured()) {
         logger_1.logger.warn('Google OAuth not configured');
@@ -45,7 +58,6 @@ function configurePassport() {
         if (!email) {
             return done(new Error('No email found in Google profile'));
         }
-        // Allow any Google user to login, admin check is done separately
         const user = {
             email,
             name: profile.displayName,
@@ -60,7 +72,7 @@ function configurePassport() {
         done(null, user);
     });
 }
-// Extract and verify token from request (DRY - used by both middlewares)
+// Extract and verify token from request
 function extractAndVerifyToken(req) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -75,10 +87,15 @@ function extractAndVerifyToken(req) {
         return { error: 'Invalid token', status: 401 };
     }
 }
-// Populate request with user info from JWT payload
+// Populate request with user info from JWT payload (role is fetched fresh from DB)
 function populateRequestFromPayload(req, payload) {
-    req.adminUser = { email: payload.email, name: payload.name, picture: payload.picture };
-    req.isAdmin = payload.role === 'admin' && isEmailAllowed(payload.email);
+    const role = getUserRole(payload.email);
+    req.user = {
+        email: payload.email,
+        name: payload.name,
+        picture: payload.picture,
+        role,
+    };
 }
 // JWT auth middleware - allows any authenticated user
 function authMiddleware(req, res, next) {
@@ -90,29 +107,39 @@ function authMiddleware(req, res, next) {
     populateRequestFromPayload(req, result.payload);
     next();
 }
-// Admin-only middleware - requires admin role
+// Admin-only middleware - requires admin or superadmin role
 function adminMiddleware(req, res, next) {
     const result = extractAndVerifyToken(req);
     if ('error' in result) {
         res.status(result.status).json({ error: result.error });
         return;
     }
-    const { payload } = result;
-    const isAdmin = payload.role === 'admin' && isEmailAllowed(payload.email);
-    if (!isAdmin) {
+    populateRequestFromPayload(req, result.payload);
+    if (!isAdminOrAbove(req.user.role)) {
         res.status(403).json({ error: 'Insufficient permissions' });
         return;
     }
-    populateRequestFromPayload(req, payload);
+    next();
+}
+// Superadmin-only middleware
+function superadminMiddleware(req, res, next) {
+    const result = extractAndVerifyToken(req);
+    if ('error' in result) {
+        res.status(result.status).json({ error: result.error });
+        return;
+    }
+    populateRequestFromPayload(req, result.payload);
+    if (req.user.role !== 'superadmin') {
+        res.status(403).json({ error: 'Superadmin access required' });
+        return;
+    }
     next();
 }
 // Generate JWT token for authenticated user
 function generateToken(user) {
-    const isAdmin = isEmailAllowed(user.email);
     return jsonwebtoken_1.default.sign({
         email: user.email,
         name: user.name,
         picture: user.picture,
-        role: isAdmin ? 'admin' : 'user'
     }, JWT_SECRET, { expiresIn: '7d' });
 }

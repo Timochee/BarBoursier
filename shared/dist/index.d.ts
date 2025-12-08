@@ -52,6 +52,21 @@ export declare const SECTOR_REVERSION_MULTIPLIERS: Record<string, number>;
 export declare const SECTOR_MATRIX: Record<string, Record<string, number>>;
 export declare const CATEGORIES: readonly ["pils", "abbey", "trappist", "specialty"];
 export type Category = typeof CATEGORIES[number];
+export declare const ROLES: readonly ["guest", "admin", "superadmin"];
+export type Role = typeof ROLES[number];
+export interface User {
+    email: string;
+    name: string;
+    picture?: string;
+    role: Role;
+}
+export interface Admin {
+    id: number;
+    email: string;
+    name: string;
+    addedAt: string;
+    addedBy: string;
+}
 export declare const BUY_COOLDOWN_MS = 300;
 export declare const DEFAULT_TRANSACTION_LIMIT = 50;
 export declare const DEFAULT_PRICE_HISTORY_LIMIT = 100;

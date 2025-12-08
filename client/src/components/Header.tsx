@@ -17,6 +17,7 @@ interface HeaderProps {
 
   // Auth
   isAdmin: boolean;
+  isSuperadmin: boolean;
   isLoggedIn: boolean;
   isAuthLoading: boolean;
   user: User | null;
@@ -30,6 +31,7 @@ interface HeaderProps {
   // Admin actions
   onShowBeerManagement: () => void;
   onShowHistory: () => void;
+  onShowAdminManagement: () => void;
   onReset: () => void;
 
   // Settings
@@ -44,6 +46,7 @@ export function Header({
   isLoading,
   isConnected,
   isAdmin,
+  isSuperadmin,
   isLoggedIn,
   isAuthLoading,
   user,
@@ -53,6 +56,7 @@ export function Header({
   onToggleTheme,
   onShowBeerManagement,
   onShowHistory,
+  onShowAdminManagement,
   onReset,
   keepQuantity,
   showImpactOnBuy,
@@ -136,6 +140,19 @@ export function Header({
                     <span className="hidden sm:inline">History</span>
                   </button>
                 </Tooltip>
+                {isSuperadmin && (
+                  <Tooltip content="Manage admin users">
+                    <button
+                      onClick={onShowAdminManagement}
+                      className="btn btn-ghost flex items-center gap-2 text-purple-400"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      <span className="hidden sm:inline">Admins</span>
+                    </button>
+                  </Tooltip>
+                )}
 
                 <Separator />
 
@@ -193,6 +210,7 @@ export function Header({
             <UserAuth
               isLoggedIn={isLoggedIn}
               isAdmin={isAdmin}
+              isSuperadmin={isSuperadmin}
               isAuthLoading={isAuthLoading}
               user={user}
               onLogin={onLogin}
@@ -257,20 +275,33 @@ function ConnectionStatus({ isConnected }: { isConnected: boolean }) {
 interface UserAuthProps {
   isLoggedIn: boolean;
   isAdmin: boolean;
+  isSuperadmin: boolean;
   isAuthLoading: boolean;
   user: User | null;
   onLogin: () => void;
   onLogout: () => void;
 }
 
-function UserAuth({ isLoggedIn, isAdmin, isAuthLoading, user, onLogin, onLogout }: UserAuthProps) {
+function UserAuth({ isLoggedIn, isAdmin, isSuperadmin, isAuthLoading, user, onLogin, onLogout }: UserAuthProps) {
+  const getRoleLabel = () => {
+    if (isSuperadmin) return ' (Superadmin)';
+    if (isAdmin) return ' (Admin)';
+    return '';
+  };
+
+  const getColorClass = () => {
+    if (isSuperadmin) return 'text-purple-400';
+    if (isAdmin) return 'text-amber-400';
+    return '';
+  };
+
   if (isLoggedIn) {
     return (
-      <Tooltip content={`${user?.name || user?.email}${isAdmin ? ' (Admin)' : ''}`}>
+      <Tooltip content={`${user?.name || user?.email}${getRoleLabel()}`}>
         <button
           onClick={onLogout}
-          className={`btn btn-ghost flex items-center gap-2 ${isAdmin ? 'text-amber-400' : ''}`}
-          style={{ color: isAdmin ? undefined : 'var(--text-primary)' }}
+          className={`btn btn-ghost flex items-center gap-2 ${getColorClass()}`}
+          style={{ color: (isAdmin || isSuperadmin) ? undefined : 'var(--text-primary)' }}
         >
           {user?.picture ? (
             <img src={user.picture} alt="" className="w-6 h-6 rounded-full" />
