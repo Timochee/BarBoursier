@@ -11,12 +11,20 @@ exports.authMiddleware = authMiddleware;
 exports.adminMiddleware = adminMiddleware;
 exports.superadminMiddleware = superadminMiddleware;
 exports.generateToken = generateToken;
+exports.verifySocketToken = verifySocketToken;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const passport_1 = __importDefault(require("passport"));
 const passport_google_oauth20_1 = require("passport-google-oauth20");
 const logger_1 = require("../logger");
 const repositories_1 = require("../repositories");
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
+function getJwtSecret() {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        throw new Error('JWT_SECRET environment variable is required');
+    }
+    return secret;
+}
+const JWT_SECRET = getJwtSecret();
 const SUPERADMIN_EMAIL = (process.env.SUPERADMIN_EMAIL || '').trim().toLowerCase();
 // Get user role based on email
 function getUserRole(email) {
@@ -45,6 +53,7 @@ function configurePassport() {
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const serverPort = process.env.PORT || '3001';
     const callbackURL = process.env.OAUTH_CALLBACK_URL || `http://localhost:${serverPort}/api/auth/google/callback`;
+    logger_1.logger.info({ callbackURL, superadmin: process.env.SUPERADMIN_EMAIL }, 'OAuth config');
     if (!isOAuthConfigured()) {
         logger_1.logger.warn('Google OAuth not configured');
         return;
@@ -142,4 +151,20 @@ function generateToken(user) {
         name: user.name,
         picture: user.picture,
     }, JWT_SECRET, { expiresIn: '7d' });
+}
+// Verify JWT token for Socket.io authentication
+function verifySocketToken(token) {
+    try {
+        const payload = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+        const role = getUserRole(payload.email);
+        return {
+            email: payload.email,
+            name: payload.name,
+            picture: payload.picture,
+            role,
+        };
+    }
+    catch {
+        return null;
+    }
 }

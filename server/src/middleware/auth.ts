@@ -6,7 +6,15 @@ import { logger } from '../logger';
 import { adminRepository } from '../repositories';
 import type { Role } from 'shared';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
+  return secret;
+}
+
+const JWT_SECRET = getJwtSecret();
 const SUPERADMIN_EMAIL = (process.env.SUPERADMIN_EMAIL || '').trim().toLowerCase();
 
 export interface AuthUser {
@@ -194,4 +202,20 @@ export function generateToken(user: Omit<AuthUser, 'role'>): string {
     name: user.name,
     picture: user.picture,
   }, JWT_SECRET, { expiresIn: '7d' });
+}
+
+// Verify JWT token for Socket.io authentication
+export function verifySocketToken(token: string): AuthUser | null {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const role = getUserRole(payload.email);
+    return {
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+      role,
+    };
+  } catch {
+    return null;
+  }
 }

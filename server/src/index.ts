@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import passport from 'passport';
 import path from 'path';
 import {createServer} from 'http';
@@ -10,11 +12,13 @@ import apiRoutes from './routes';
 import authRoutes from './routes/auth';
 import {marketService, chartDataService} from './services';
 import {setSocketIO} from './socket';
-import {configurePassport} from './middleware/auth';
+import {configurePassport, verifySocketToken, isAdminOrAbove} from './middleware/auth';
 import {logger} from './logger';
 import type {BuyRequest} from 'shared';
 
 const PORT = process.env.PORT || 3001;
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const isProduction = process.env.NODE_ENV === 'production';
 
 // Initialize database
 initializeDatabase();
@@ -27,18 +31,37 @@ configurePassport();
 const app = express();
 const httpServer = createServer(app);
 
+// CORS configuration - restrict to CLIENT_URL in production
+const corsOptions = {
+    origin: isProduction ? CLIENT_URL : true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+};
+
 // Socket.io setup
 const io = new Server(httpServer, {
-    cors: {
-        origin: true,
-        methods: ['GET', 'POST'],
-    },
+    cors: corsOptions,
 });
 
 setSocketIO(io);
 
+// Security middleware
+app.use(helmet({
+    contentSecurityPolicy: isProduction ? undefined : false, // Disable CSP in dev for hot reload
+}));
+
+// Rate limiting - 100 requests per minute per IP
+const limiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    message: { error: 'Too many requests, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api', limiter);
+
 // Middleware
-app.use(cors({origin: true}));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(passport.initialize());
 
@@ -75,17 +98,45 @@ io.on('connection', (socket) => {
     const beers = marketService.getAllBeers();
     socket.emit('pricesUpdated', beers);
 
-    socket.on('buy', (data: BuyRequest) => {
-        const result = marketService.buy(data.beerId, data.quantity);
+    // Authenticated buy event - requires admin role
+    socket.on('buy', (data: BuyRequest & { token?: string }) => {
+        const { token, beerId, quantity } = data;
+
+        if (!token) {
+            socket.emit('error', { message: 'Authentication required' });
+            return;
+        }
+
+        const user = verifySocketToken(token);
+        if (!user || !isAdminOrAbove(user.role)) {
+            socket.emit('error', { message: 'Admin access required' });
+            return;
+        }
+
+        const result = marketService.buy(beerId, quantity);
         if (result) {
-            logger.info({beerId: data.beerId, quantity: data.quantity}, 'Purchase made');
+            logger.info({beerId, quantity, user: user.email}, 'Purchase made');
             io.emit('pricesUpdated', marketService.getAllBeers());
             socket.emit('purchaseResult', result);
         }
     });
 
-    socket.on('reset', () => {
-        logger.info('Market reset');
+    // Authenticated reset event - requires admin role
+    socket.on('reset', (data?: { token?: string }) => {
+        const token = data?.token;
+
+        if (!token) {
+            socket.emit('error', { message: 'Authentication required' });
+            return;
+        }
+
+        const user = verifySocketToken(token);
+        if (!user || !isAdminOrAbove(user.role)) {
+            socket.emit('error', { message: 'Admin access required' });
+            return;
+        }
+
+        logger.info({user: user.email}, 'Market reset');
         const beers = marketService.reset();
         io.emit('marketReset');
         io.emit('pricesUpdated', beers);

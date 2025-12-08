@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import type { Beer, PurchaseResult, BuyRequest } from 'shared';
+import { getToken } from './api';
 
 type SocketEventHandlers = {
   onPricesUpdated?: (beers: Beer[]) => void;
@@ -67,11 +68,13 @@ class SocketService {
   }
 
   buy(request: BuyRequest): void {
-    this.socket?.emit('buy', request);
+    const token = getToken();
+    this.socket?.emit('buy', { ...request, token });
   }
 
   reset(): void {
-    this.socket?.emit('reset');
+    const token = getToken();
+    this.socket?.emit('reset', { token });
   }
 
   isConnected(): boolean {
