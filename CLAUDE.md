@@ -11,11 +11,19 @@ Bar Boursier is a web-based stock market bar application where beer prices fluct
 ```bash
 npm install          # Install all dependencies
 npm run dev          # Development (both client and server)
-npm run dev:client   # Client only
-npm run dev:server   # Server only
-npm run build        # Build all workspaces
-npm start            # Run production
+npm run dev:client   # Client only (port 5173)
+npm run dev:server   # Server only (port 3001, copies .env.development to .env)
+npm run build        # Build all workspaces (shared → server → client)
+npm start            # Run production server
 ```
+
+### Docker
+```bash
+docker compose build                    # Build image
+docker compose up -d                    # Start with Caddy reverse proxy
+docker compose logs -f barboursier      # View app logs
+```
+Requires `server/.env.production` file. Uses Caddy for HTTPS/reverse proxy.
 
 ## Tech Stack
 
@@ -123,13 +131,15 @@ All types, constants, and pricing configuration are centralized:
 
 ### Environment Variables
 ```env
-GOOGLE_CLIENT_ID=...        # From Google Cloud Console
-GOOGLE_CLIENT_SECRET=...    # From Google Cloud Console
-ADMIN_EMAILS=a@x.com,b@y.com  # Comma-separated admin emails
-JWT_SECRET=...              # Secret for signing JWTs
-PORT=3001                   # Server port
+GOOGLE_CLIENT_ID=...           # From Google Cloud Console
+GOOGLE_CLIENT_SECRET=...       # From Google Cloud Console
+ADMIN_EMAILS=a@x.com,b@y.com   # Comma-separated admin emails
+JWT_SECRET=...                 # Secret for signing JWTs
+PORT=3001                      # Server port
 CLIENT_URL=http://localhost:5173  # For OAuth redirect
+LOG_LEVEL=info                 # Pino log level (debug, info, warn, error)
 ```
+Server reads from `.env.development` (dev) or `.env.production` (Docker).
 
 ## UI/UX Features
 
@@ -224,14 +234,16 @@ Sector Matrix (row buys → column decreases):
 4. **Redistribution ratio**: If others can't decrease enough, all increases are scaled down
 
 ### Constants
-| Setting           | Value  | Source      |
-|-------------------|--------|-------------|
-| baseMove          | 0.45   | settings DB |
-| sectorCorrelation | 0.45   | settings DB |
-| minPrice          | 0.50€  | settings DB |
-| maxPrice          | 25.00€ | settings DB |
-| MEAN_REVERSION    | 0.01   | code        |
-| MAX_DECREASE      | 10%    | code        |
+| Setting              | Value  | Source      |
+|----------------------|--------|-------------|
+| baseMove             | 0.45   | settings DB |
+| sectorCorrelation    | 0.45   | settings DB |
+| minPrice             | 0.50€  | settings DB |
+| maxPrice             | 25.00€ | settings DB |
+| MEAN_REVERSION       | 0.01   | shared/     |
+| MAX_DECREASE_RATIO   | 10%    | shared/     |
+| BUY_COOLDOWN_MS      | 300    | shared/     |
+| volatility.min/max   | 0.1-1.0| shared/     |
 
 ### Beer Sectors & Volatility
 | Sector    | Beers                               | Volatility |
@@ -242,6 +254,9 @@ Sector Matrix (row buys → column decreases):
 | specialty | Duvel, Delirium, Kwak, Chouffe      | 0.40-0.50  |
 
 ## API Structure
+
+### Health
+- `GET /health` - Health check endpoint (used by Docker healthcheck)
 
 ### Authentication
 - `GET /api/auth/google` - Initiate Google OAuth

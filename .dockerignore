@@ -43,6 +43,15 @@ docs
 Dockerfile*
 docker-compose*.yml
 .dockerignore
+Caddyfile
+fly.toml
+
+# GitHub/CI (not needed in image)
+.github
+
+# Claude
+.claude
+CLAUDE.md
 
 # Local data
 data/*.db
