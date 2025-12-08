@@ -9,9 +9,11 @@ exports.closeDatabase = closeDatabase;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
-const DB_PATH = path_1.default.join(__dirname, '../../data/barboursier.db');
+const logger_1 = require("../logger");
+const DB_PATH = process.env.NODE_ENV === 'production'
+    ? '/app/data/barboursier.db'
+    : path_1.default.join(__dirname, '../../data/barboursier.db');
 const INIT_SQL_PATH = path_1.default.join(__dirname, 'init.sql');
-// Ensure data directory exists
 const dataDir = path_1.default.dirname(DB_PATH);
 if (!fs_1.default.existsSync(dataDir)) {
     fs_1.default.mkdirSync(dataDir, { recursive: true });
@@ -21,8 +23,9 @@ exports.db.pragma('journal_mode = WAL');
 function initializeDatabase() {
     const initSql = fs_1.default.readFileSync(INIT_SQL_PATH, 'utf-8');
     exports.db.exec(initSql);
-    console.log('Database initialized');
+    logger_1.logger.info({ path: DB_PATH }, 'Database initialized');
 }
 function closeDatabase() {
     exports.db.close();
+    logger_1.logger.info('Database closed');
 }

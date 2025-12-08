@@ -1,9 +1,9 @@
-import { useState, useRef, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { Beer } from 'shared';
-import { BUY_COOLDOWN_MS } from 'shared';
 import { createBeerColorMap, getBeerColor } from '../utils/colors';
 import { CATEGORY_STYLES } from '../utils/styles';
-import { useBeerSort, type SortField } from '../hooks/useBeerSort';
+import { getChangeClass, PriceArrow } from '../utils/priceChange';
+import { useBeerSort, useBuyQuantity, type SortField } from '../hooks';
 
 interface BeerTableProps {
   beers: Beer[];
@@ -15,10 +15,6 @@ interface BeerTableProps {
 }
 
 export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, searchQuery = '', isAdmin = false }: BeerTableProps) {
-  const [quantities, setQuantities] = useState<Record<number, number>>({});
-  const [processingBeer, setProcessingBeer] = useState<number | null>(null);
-  const lastBuyTime = useRef<number>(0);
-
   const {
     sortField,
     sortDirection,
@@ -28,59 +24,16 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
     getChangePercent,
   } = useBeerSort(beers, categoryFilter, searchQuery);
 
+  const {
+    getQuantity,
+    setQuantity,
+    handleBuy,
+    isProcessing,
+    isDisabled,
+  } = useBuyQuantity({ onBuy, keepQuantity });
+
   // Create stable color map based on beer IDs
   const beerColorMap = useMemo(() => createBeerColorMap(beers), [beers]);
-
-  const handleQuantityChange = (beerId: number, value: string) => {
-    const qty = parseInt(value, 10);
-    if (!isNaN(qty) && qty >= 1) {
-      setQuantities(prev => ({ ...prev, [beerId]: qty }));
-    }
-  };
-
-  const handleBuy = (beerId: number) => {
-    const now = Date.now();
-    if (now - lastBuyTime.current < BUY_COOLDOWN_MS) return;
-    if (processingBeer !== null) return;
-
-    lastBuyTime.current = now;
-    setProcessingBeer(beerId);
-
-    const quantity = quantities[beerId] || 1;
-    onBuy(beerId, quantity);
-
-    if (!keepQuantity) {
-      setQuantities(prev => ({ ...prev, [beerId]: 1 }));
-    }
-
-    setTimeout(() => {
-      setProcessingBeer(null);
-    }, BUY_COOLDOWN_MS);
-  };
-
-  const getChangeClass = (change: number) => {
-    if (change > 0) return 'price-up';
-    if (change < 0) return 'price-down';
-    return 'price-neutral';
-  };
-
-  const getPriceArrow = (change: number) => {
-    if (change > 0) {
-      return (
-        <svg className="w-4 h-4 inline-block ml-1" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-          <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-        </svg>
-      );
-    }
-    if (change < 0) {
-      return (
-        <svg className="w-4 h-4 inline-block ml-1" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-          <path fillRule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clipRule="evenodd" />
-        </svg>
-      );
-    }
-    return null;
-  };
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
@@ -143,8 +96,7 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
           {sortedBeers.map((beer) => {
             const change = getChangePercent(beer);
             const showCategoryBadge = showBadgeForBeer.has(beer.id);
-            const isProcessing = processingBeer === beer.id;
-            const isDisabled = processingBeer !== null;
+            const beerIsProcessing = isProcessing(beer.id);
             const beerColor = getBeerColor(beer.id, beerColorMap);
 
             return (
@@ -184,7 +136,7 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
                 <td className={`p-4 text-right tabular-nums text-sm sm:text-base ${getChangeClass(change)}`}>
                   <span className="inline-flex items-center">
                     {change > 0 ? '+' : ''}{change.toFixed(1)}%
-                    <span className="hidden sm:inline">{getPriceArrow(change)}</span>
+                    <span className="hidden sm:inline"><PriceArrow change={change} /></span>
                   </span>
                 </td>
                 {isAdmin && (
@@ -193,8 +145,8 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
                       <input
                         type="number"
                         min="1"
-                        value={quantities[beer.id] || 1}
-                        onChange={e => handleQuantityChange(beer.id, e.target.value)}
+                        value={getQuantity(beer.id)}
+                        onChange={e => setQuantity(beer.id, e.target.value)}
                         className="w-16 p-2 text-center text-sm"
                         disabled={isDisabled}
                         aria-label={`Quantity for ${beer.name}`}
@@ -206,9 +158,9 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
                         disabled={isDisabled}
                         className={`btn btn-primary text-sm min-w-[60px] ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                         aria-label={`Buy ${beer.name}`}
-                        aria-busy={isProcessing}
+                        aria-busy={beerIsProcessing}
                       >
-                        {isProcessing ? (
+                        {beerIsProcessing ? (
                           <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
                         ) : (
                           'Buy'

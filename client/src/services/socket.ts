@@ -21,27 +21,24 @@ class SocketService {
     }
 
     this.handlers = handlers;
-    this.socket = io('http://localhost:3001', {
+    // In production, connect to same origin. In dev, Vite proxies to localhost:3001
+    this.socket = io({
       transports: ['websocket', 'polling'],
     });
 
     this.socket.on('connect', () => {
-      console.log('Socket connected');
       this.handlers.onConnect?.();
     });
 
     this.socket.on('disconnect', () => {
-      console.log('Socket disconnected');
       this.handlers.onDisconnect?.();
     });
 
-    this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+    this.socket.on('connect_error', () => {
       this.handlers.onError?.('Connection failed. Retrying...');
     });
 
     this.socket.on('error', (error) => {
-      console.error('Socket error:', error);
       this.handlers.onError?.(error.message || 'An error occurred');
     });
 

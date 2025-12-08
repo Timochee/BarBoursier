@@ -90,3 +90,8 @@ export type Category = typeof CATEGORIES[number];
 export const BUY_COOLDOWN_MS = 300;
 export const DEFAULT_TRANSACTION_LIMIT = 50;
 export const DEFAULT_PRICE_HISTORY_LIMIT = 100;
+
+// Validation constants
+export const VALIDATION = {
+  volatility: { min: 0.1, max: 1.0 },
+} as const;

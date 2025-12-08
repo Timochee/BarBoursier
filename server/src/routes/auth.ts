@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import passport from 'passport';
 import { generateToken, authMiddleware, AuthRequest, isOAuthConfigured } from '../middleware/auth';
+import { logger } from '../logger';
 
 const router = Router();
 
@@ -30,7 +31,7 @@ router.get('/google/callback', (req: Request, res: Response, next: NextFunction)
 
   passport.authenticate('google', { session: false }, (err: Error | null, user: { email: string; name: string; picture: string } | false) => {
     if (err) {
-      console.error('Google OAuth error:', err.message);
+      logger.error({err}, 'Google OAuth error');
       res.redirect(`${clientUrl}?auth_error=${encodeURIComponent(err.message)}`);
       return;
     }

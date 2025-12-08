@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useTransactions } from '../hooks';
+import { Modal, ModalHeader, ModalFooter } from './Modal';
 
 interface TransactionHistoryProps {
   onClose: () => void;
@@ -11,50 +12,16 @@ export function TransactionHistory({ onClose }: TransactionHistoryProps) {
 
   useEffect(() => {
     closeButtonRef.current?.focus();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, []);
 
   return (
-    <div
-      className="modal-overlay"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="history-dialog-title"
-    >
-      <div
-        className="modal-content w-full max-w-4xl"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          className="px-6 py-4 border-b flex items-center justify-between"
-          style={{ borderColor: 'var(--border-color)' }}
-        >
-          <div>
-            <h2 id="history-dialog-title" className="text-xl font-bold">Transaction History</h2>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              {transactions?.length || 0} transactions recorded
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg transition-colors hover:bg-white/10"
-            aria-label="Close transaction history"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <Modal onClose={onClose} maxWidth="4xl" ariaLabelledBy="history-dialog-title">
+      <ModalHeader
+        title="Transaction History"
+        subtitle={`${transactions?.length || 0} transactions recorded`}
+        titleId="history-dialog-title"
+        onClose={onClose}
+      />
 
         {/* Content */}
         <div className="overflow-auto max-h-[60vh]">
@@ -125,11 +92,8 @@ export function TransactionHistory({ onClose }: TransactionHistoryProps) {
           )}
         </div>
 
-        {/* Footer */}
-        <div
-          className="px-6 py-4 border-t flex items-center justify-between"
-          style={{ borderColor: 'var(--border-color)' }}
-        >
+      <ModalFooter>
+        <div className="flex items-center justify-between">
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Total spent:{' '}
             <span className="font-bold text-[#e94560]">
@@ -140,7 +104,7 @@ export function TransactionHistory({ onClose }: TransactionHistoryProps) {
             Close
           </button>
         </div>
-      </div>
-    </div>
+      </ModalFooter>
+    </Modal>
   );
 }

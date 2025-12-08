@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const passport_1 = __importDefault(require("passport"));
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../logger");
 const router = (0, express_1.Router)();
 // GET /api/auth/google - Initiate Google OAuth
 router.get('/google', (req, res, next) => {
@@ -30,7 +31,7 @@ router.get('/google/callback', (req, res, next) => {
     }
     passport_1.default.authenticate('google', { session: false }, (err, user) => {
         if (err) {
-            console.error('Google OAuth error:', err.message);
+            logger_1.logger.error({ err }, 'Google OAuth error');
             res.redirect(`${clientUrl}?auth_error=${encodeURIComponent(err.message)}`);
             return;
         }

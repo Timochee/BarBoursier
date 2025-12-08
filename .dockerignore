@@ -1,0 +1,54 @@
+# Git
+.git
+.gitignore
+
+# Dependencies (will be installed fresh)
+**/node_modules
+
+# Build outputs (will be built fresh)
+**/dist
+
+# Environment files (CONFIG OUT: Never bake secrets)
+**/.env
+**/.env.*
+!**/.env.example
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test files
+**/__tests__
+**/*.test.ts
+**/*.spec.ts
+coverage
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Docker files (not needed in build context)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Local data
+data/*.db
+data/*.db-*
+
+# Misc
+.npm
+.cache
+tmp

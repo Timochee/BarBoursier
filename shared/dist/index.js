@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_PRICE_HISTORY_LIMIT = exports.DEFAULT_TRANSACTION_LIMIT = exports.BUY_COOLDOWN_MS = exports.CATEGORIES = exports.SECTOR_MATRIX = exports.SECTOR_REVERSION_MULTIPLIERS = exports.MAX_DECREASE_RATIO = exports.MEAN_REVERSION_BASE_STRENGTH = exports.DEFAULT_SETTINGS = void 0;
+exports.VALIDATION = exports.DEFAULT_PRICE_HISTORY_LIMIT = exports.DEFAULT_TRANSACTION_LIMIT = exports.BUY_COOLDOWN_MS = exports.CATEGORIES = exports.SECTOR_MATRIX = exports.SECTOR_REVERSION_MULTIPLIERS = exports.MAX_DECREASE_RATIO = exports.MEAN_REVERSION_BASE_STRENGTH = exports.DEFAULT_SETTINGS = void 0;
 exports.DEFAULT_SETTINGS = {
     baseMove: 0.45,
     sectorCorrelation: 0.45,
@@ -32,3 +32,7 @@ exports.CATEGORIES = ['pils', 'abbey', 'trappist', 'specialty'];
 exports.BUY_COOLDOWN_MS = 300;
 exports.DEFAULT_TRANSACTION_LIMIT = 50;
 exports.DEFAULT_PRICE_HISTORY_LIMIT = 100;
+// Validation constants
+exports.VALIDATION = {
+    volatility: { min: 0.1, max: 1.0 },
+};

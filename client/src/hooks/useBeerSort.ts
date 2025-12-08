@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Beer } from 'shared';
+import { getChangePercent } from '../utils/priceChange';
 
 export type SortField = 'category' | 'name' | 'basePrice' | 'currentPrice' | 'change';
 export type SortDirection = 'asc' | 'desc';
@@ -10,10 +11,6 @@ const CATEGORY_ORDER: Record<string, number> = {
   trappist: 2,
   specialty: 3,
 };
-
-function getChangePercent(beer: Beer): number {
-  return ((beer.currentPrice - beer.basePrice) / beer.basePrice) * 100;
-}
 
 export function useBeerSort(beers: Beer[], categoryFilter: string | null, searchQuery: string = '') {
   const [sortField, setSortField] = useState<SortField>('category');

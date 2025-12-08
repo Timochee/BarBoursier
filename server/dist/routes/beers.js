@@ -5,6 +5,7 @@ const shared_1 = require("shared");
 const repositories_1 = require("../repositories");
 const socket_1 = require("../socket");
 const auth_1 = require("../middleware/auth");
+const logger_1 = require("../logger");
 const router = (0, express_1.Router)();
 // GET /api/beers - Get all beers
 router.get('/', (req, res) => {
@@ -47,8 +48,8 @@ router.post('/', auth_1.adminMiddleware, (req, res) => {
         res.status(400).json({ error: `Category must be one of: ${shared_1.CATEGORIES.join(', ')}` });
         return;
     }
-    if (typeof volatility !== 'number' || volatility < 0.1 || volatility > 1) {
-        res.status(400).json({ error: 'Volatility must be between 0.1 and 1.0' });
+    if (typeof volatility !== 'number' || volatility < shared_1.VALIDATION.volatility.min || volatility > shared_1.VALIDATION.volatility.max) {
+        res.status(400).json({ error: `Volatility must be between ${shared_1.VALIDATION.volatility.min} and ${shared_1.VALIDATION.volatility.max}` });
         return;
     }
     // Check for duplicate name
@@ -68,7 +69,7 @@ router.post('/', auth_1.adminMiddleware, (req, res) => {
         res.status(201).json(beer);
     }
     catch (error) {
-        console.error('Error creating beer:', error);
+        logger_1.logger.error({ error }, 'Error creating beer');
         res.status(500).json({ error: 'Failed to create beer' });
     }
 });
@@ -86,16 +87,16 @@ router.put('/:id', auth_1.adminMiddleware, (req, res) => {
         res.status(400).json({ error: 'Name cannot be empty' });
         return;
     }
-    if (basePrice !== undefined && (typeof basePrice !== 'number' || basePrice < 0.5 || basePrice > 25)) {
-        res.status(400).json({ error: 'Base price must be between 0.50 and 25.00' });
+    if (basePrice !== undefined && (typeof basePrice !== 'number' || basePrice < shared_1.DEFAULT_SETTINGS.minPrice || basePrice > shared_1.DEFAULT_SETTINGS.maxPrice)) {
+        res.status(400).json({ error: `Base price must be between ${shared_1.DEFAULT_SETTINGS.minPrice} and ${shared_1.DEFAULT_SETTINGS.maxPrice}` });
         return;
     }
     if (category !== undefined && !shared_1.CATEGORIES.includes(category)) {
         res.status(400).json({ error: `Category must be one of: ${shared_1.CATEGORIES.join(', ')}` });
         return;
     }
-    if (volatility !== undefined && (typeof volatility !== 'number' || volatility < 0.1 || volatility > 1)) {
-        res.status(400).json({ error: 'Volatility must be between 0.1 and 1.0' });
+    if (volatility !== undefined && (typeof volatility !== 'number' || volatility < shared_1.VALIDATION.volatility.min || volatility > shared_1.VALIDATION.volatility.max)) {
+        res.status(400).json({ error: `Volatility must be between ${shared_1.VALIDATION.volatility.min} and ${shared_1.VALIDATION.volatility.max}` });
         return;
     }
     // Check for duplicate name (excluding current beer)
@@ -115,7 +116,7 @@ router.put('/:id', auth_1.adminMiddleware, (req, res) => {
         res.json(beer);
     }
     catch (error) {
-        console.error('Error updating beer:', error);
+        logger_1.logger.error({ error }, 'Error updating beer');
         res.status(500).json({ error: 'Failed to update beer' });
     }
 });
@@ -139,7 +140,7 @@ router.delete('/:id', auth_1.adminMiddleware, (req, res) => {
         }
     }
     catch (error) {
-        console.error('Error deleting beer:', error);
+        logger_1.logger.error({ error }, 'Error deleting beer');
         res.status(500).json({ error: 'Failed to delete beer' });
     }
 });

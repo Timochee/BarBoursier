@@ -2,18 +2,19 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import passport from 'passport';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import { initializeDatabase, closeDatabase } from './db/connection';
+import path from 'path';
+import {createServer} from 'http';
+import {Server} from 'socket.io';
+import {initializeDatabase, closeDatabase, db} from './db/connection';
 import apiRoutes from './routes';
 import authRoutes from './routes/auth';
-import { marketService, chartDataService } from './services';
-import { setSocketIO } from './socket';
-import { configurePassport } from './middleware/auth';
-import type { BuyRequest } from 'shared';
+import {marketService, chartDataService} from './services';
+import {setSocketIO} from './socket';
+import {configurePassport} from './middleware/auth';
+import {logger} from './logger';
+import type {BuyRequest} from 'shared';
 
 const PORT = process.env.PORT || 3001;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 // Initialize database
 initializeDatabase();
@@ -28,19 +29,16 @@ const httpServer = createServer(app);
 
 // Socket.io setup
 const io = new Server(httpServer, {
-  cors: {
-    origin: true, // Allow all origins in development
-    methods: ['GET', 'POST'],
-  },
+    cors: {
+        origin: true,
+        methods: ['GET', 'POST'],
+    },
 });
 
-// Make io available globally for beer updates
 setSocketIO(io);
 
 // Middleware
-app.use(cors({
-  origin: true, // Allow all origins in development
-}));
+app.use(cors({origin: true}));
 app.use(express.json());
 app.use(passport.initialize());
 
@@ -48,57 +46,68 @@ app.use(passport.initialize());
 app.use('/api', apiRoutes);
 app.use('/api/auth', authRoutes);
 
-// Health check
+// Health check with DB verification
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+    try {
+        db.prepare('SELECT 1').get();
+        res.json({status: 'ok', db: 'connected'});
+    } catch {
+        res.status(503).json({status: 'error', db: 'disconnected'});
+    }
 });
+
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+    const clientDistPath = path.join(__dirname, '../../client/dist');
+    app.use(express.static(clientDistPath));
+
+    app.get('*', (req, res) => {
+        if (!req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
+            res.sendFile(path.join(clientDistPath, 'index.html'));
+        }
+    });
+}
 
 // Socket.io events
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
+    logger.info({socketId: socket.id}, 'Client connected');
 
-  // Send initial data
-  const beers = marketService.getAllBeers();
-  socket.emit('pricesUpdated', beers);
+    const beers = marketService.getAllBeers();
+    socket.emit('pricesUpdated', beers);
 
-  // Handle buy event
-  socket.on('buy', (data: BuyRequest) => {
-    const result = marketService.buy(data.beerId, data.quantity);
+    socket.on('buy', (data: BuyRequest) => {
+        const result = marketService.buy(data.beerId, data.quantity);
+        if (result) {
+            logger.info({beerId: data.beerId, quantity: data.quantity}, 'Purchase made');
+            io.emit('pricesUpdated', marketService.getAllBeers());
+            socket.emit('purchaseResult', result);
+        }
+    });
 
-    if (result) {
-      // Broadcast updated prices to all clients
-      const updatedBeers = marketService.getAllBeers();
-      io.emit('pricesUpdated', updatedBeers);
-      socket.emit('purchaseResult', result);
-    }
-  });
+    socket.on('reset', () => {
+        logger.info('Market reset');
+        const beers = marketService.reset();
+        io.emit('marketReset');
+        io.emit('pricesUpdated', beers);
+    });
 
-  // Handle reset event
-  socket.on('reset', () => {
-    const beers = marketService.reset();
-    io.emit('marketReset');
-    io.emit('pricesUpdated', beers);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
+    socket.on('disconnect', () => {
+        logger.info({socketId: socket.id}, 'Client disconnected');
+    });
 });
 
-// Start server on all interfaces
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Start server
+const port = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT;
+httpServer.listen(port, '0.0.0.0', () => {
+    logger.info({port}, 'Server started');
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
-  console.log('Shutting down...');
-  closeDatabase();
-  process.exit(0);
-});
+const shutdown = () => {
+    logger.info('Shutting down...');
+    closeDatabase();
+    process.exit(0);
+};
 
-process.on('SIGTERM', () => {
-  console.log('Shutting down...');
-  closeDatabase();
-  process.exit(0);
-});
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

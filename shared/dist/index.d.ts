@@ -55,3 +55,9 @@ export type Category = typeof CATEGORIES[number];
 export declare const BUY_COOLDOWN_MS = 300;
 export declare const DEFAULT_TRANSACTION_LIMIT = 50;
 export declare const DEFAULT_PRICE_HISTORY_LIMIT = 100;
+export declare const VALIDATION: {
+    readonly volatility: {
+        readonly min: 0.1;
+        readonly max: 1;
+    };
+};

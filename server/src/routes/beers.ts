@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { CATEGORIES, DEFAULT_SETTINGS } from 'shared';
+import { CATEGORIES, DEFAULT_SETTINGS, VALIDATION } from 'shared';
 import { beerRepository } from '../repositories';
 import { emitBeersUpdated } from '../socket';
 import { adminMiddleware } from '../middleware/auth';
+import { logger } from '../logger';
 
 const router = Router();
 
@@ -57,8 +58,8 @@ router.post('/', adminMiddleware as any, (req, res) => {
     return;
   }
 
-  if (typeof volatility !== 'number' || volatility < 0.1 || volatility > 1) {
-    res.status(400).json({ error: 'Volatility must be between 0.1 and 1.0' });
+  if (typeof volatility !== 'number' || volatility < VALIDATION.volatility.min || volatility > VALIDATION.volatility.max) {
+    res.status(400).json({ error: `Volatility must be between ${VALIDATION.volatility.min} and ${VALIDATION.volatility.max}` });
     return;
   }
 
@@ -81,7 +82,7 @@ router.post('/', adminMiddleware as any, (req, res) => {
 
     res.status(201).json(beer);
   } catch (error) {
-    console.error('Error creating beer:', error);
+    logger.error({error}, 'Error creating beer');
     res.status(500).json({ error: 'Failed to create beer' });
   }
 });
@@ -103,8 +104,8 @@ router.put('/:id', adminMiddleware as any, (req, res) => {
     return;
   }
 
-  if (basePrice !== undefined && (typeof basePrice !== 'number' || basePrice < 0.5 || basePrice > 25)) {
-    res.status(400).json({ error: 'Base price must be between 0.50 and 25.00' });
+  if (basePrice !== undefined && (typeof basePrice !== 'number' || basePrice < DEFAULT_SETTINGS.minPrice || basePrice > DEFAULT_SETTINGS.maxPrice)) {
+    res.status(400).json({ error: `Base price must be between ${DEFAULT_SETTINGS.minPrice} and ${DEFAULT_SETTINGS.maxPrice}` });
     return;
   }
 
@@ -113,8 +114,8 @@ router.put('/:id', adminMiddleware as any, (req, res) => {
     return;
   }
 
-  if (volatility !== undefined && (typeof volatility !== 'number' || volatility < 0.1 || volatility > 1)) {
-    res.status(400).json({ error: 'Volatility must be between 0.1 and 1.0' });
+  if (volatility !== undefined && (typeof volatility !== 'number' || volatility < VALIDATION.volatility.min || volatility > VALIDATION.volatility.max)) {
+    res.status(400).json({ error: `Volatility must be between ${VALIDATION.volatility.min} and ${VALIDATION.volatility.max}` });
     return;
   }
 
@@ -137,7 +138,7 @@ router.put('/:id', adminMiddleware as any, (req, res) => {
 
     res.json(beer);
   } catch (error) {
-    console.error('Error updating beer:', error);
+    logger.error({error}, 'Error updating beer');
     res.status(500).json({ error: 'Failed to update beer' });
   }
 });
@@ -163,7 +164,7 @@ router.delete('/:id', adminMiddleware as any, (req, res) => {
       res.status(500).json({ error: 'Failed to delete beer' });
     }
   } catch (error) {
-    console.error('Error deleting beer:', error);
+    logger.error({error}, 'Error deleting beer');
     res.status(500).json({ error: 'Failed to delete beer' });
   }
 });

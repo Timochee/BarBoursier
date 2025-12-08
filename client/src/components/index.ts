@@ -9,3 +9,5 @@ export { Skeleton, BeerTableSkeleton, ChartSkeleton, StatsSkeleton } from './Ske
 export { ConfirmDialog } from './ConfirmDialog';
 export { BeerManagement } from './BeerManagement';
 export { Tooltip } from './Tooltip';
+export { Modal, ModalHeader, ModalFooter, useModalKeyboard } from './Modal';
+export { Header } from './Header';
