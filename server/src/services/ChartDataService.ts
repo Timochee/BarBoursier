@@ -25,9 +25,13 @@ export class ChartDataService {
 
         for (const beer of sectorBeers) {
           const history = beerPriceHistory.get(beer.id) || [];
-          // Only include beers that have data at this time point
-          if (history.length > i) {
-            sectorTotal += history[i];
+          // Calculate the offset - beer history starts at (maxLength - history.length)
+          const beerStartIndex = maxLength - history.length;
+
+          // Only include this beer if the current time point (i) is >= when this beer started
+          if (i >= beerStartIndex && history.length > 0) {
+            const historyIndex = i - beerStartIndex;
+            sectorTotal += history[historyIndex];
             beersWithData++;
           }
         }
@@ -45,16 +49,26 @@ export class ChartDataService {
 
     // Convert Map to Record for beerPriceHistory, padding with null for missing early entries
     const beerPriceHistoryRecord: Record<number, (number | null)[]> = {};
-    beerPriceHistory.forEach((prices, beerId) => {
-      // Pad the beginning with null if this beer was added later
+
+    // Include ALL current beers, not just those with history
+    for (const beer of beers) {
+      const prices = beerPriceHistory.get(beer.id) || [];
       const paddedPrices: (number | null)[] = [];
       const missingCount = maxLength - prices.length;
+
+      // Pad the beginning with null if this beer was added later
       for (let i = 0; i < missingCount; i++) {
         paddedPrices.push(null);
       }
       paddedPrices.push(...prices);
-      beerPriceHistoryRecord[beerId] = paddedPrices;
-    });
+
+      // If beer has no history at all, add current price as the last point
+      if (prices.length === 0 && maxLength > 0) {
+        paddedPrices[maxLength - 1] = beer.currentPrice;
+      }
+
+      beerPriceHistoryRecord[beer.id] = paddedPrices;
+    }
 
     return {
       timeLabels,

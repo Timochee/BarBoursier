@@ -7,6 +7,7 @@ interface BeerListItemProps {
   isDeleteConfirm: boolean;
   onEdit: (beer: Beer) => void;
   onDelete: (beer: Beer) => void;
+  allCategories?: string[];
 }
 
 export function BeerListItem({
@@ -15,6 +16,7 @@ export function BeerListItem({
   isDeleteConfirm,
   onEdit,
   onDelete,
+  allCategories = [],
 }: BeerListItemProps) {
   return (
     <div
@@ -22,7 +24,7 @@ export function BeerListItem({
       style={{ background: 'var(--bg-tertiary)' }}
     >
       <div className="flex items-center gap-3">
-        <span className={`badge ${CATEGORY_STYLES[beer.category] || ''}`} style={getCategoryBadgeStyle(beer.category)}>
+        <span className={`badge ${CATEGORY_STYLES[beer.category] || ''}`} style={getCategoryBadgeStyle(beer.category, allCategories)}>
           {beer.category}
         </span>
         <div>

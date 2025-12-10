@@ -35,6 +35,9 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
   // Create stable color map based on beer IDs
   const beerColorMap = useMemo(() => createBeerColorMap(beers), [beers]);
 
+  // Get all unique categories for consistent color generation
+  const allCategories = useMemo(() => [...new Set(beers.map(b => b.category))], [beers]);
+
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
       return (
@@ -103,7 +106,7 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
               <tr key={beer.id} className="table-row group">
                 <td className="p-4 hidden sm:table-cell">
                   {showCategoryBadge && (
-                    <span className={`badge ${CATEGORY_STYLES[beer.category] || ''}`} style={getCategoryBadgeStyle(beer.category)}>
+                    <span className={`badge ${CATEGORY_STYLES[beer.category] || ''}`} style={getCategoryBadgeStyle(beer.category, allCategories)}>
                       {beer.category}
                     </span>
                   )}

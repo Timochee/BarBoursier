@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { DEFAULT_SETTINGS, VALIDATION } from 'shared';
-import { beerRepository } from '../repositories';
+import { beerRepository, priceHistoryRepository } from '../repositories';
 import { emitBeersUpdated } from '../socket';
 import { superadminMiddleware } from '../middleware/auth';
 import { logger } from '../logger';
@@ -77,6 +77,12 @@ router.post('/', superadminMiddleware as any, (req, res) => {
       category,
       volatility: Math.round(volatility * 100) / 100,
     });
+
+    // Record initial price in history so the beer appears correctly on the chart
+    // We record all beers' current prices to keep the history in sync
+    const allBeers = beerRepository.getAll();
+    const priceRecords = allBeers.map(b => ({ beerId: b.id, price: b.currentPrice }));
+    priceHistoryRepository.recordPrices(priceRecords);
 
     // Notify all clients about the new beer
     emitBeersUpdated();

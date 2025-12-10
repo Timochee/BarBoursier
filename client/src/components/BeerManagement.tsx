@@ -338,6 +338,7 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
                     isDeleteConfirm={deleteConfirm === beer.id}
                     onEdit={startEdit}
                     onDelete={handleDelete}
+                    allCategories={existingCategories}
                   />
                 ))
               )}

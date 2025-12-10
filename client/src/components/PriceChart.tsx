@@ -98,7 +98,7 @@ export function PriceChart({ chartData, beers }: PriceChartProps) {
   let maxPrice = -Infinity;
 
   const data = chartData.timeLabels.map((label, index) => {
-    const point: Record<string, number | string> = {
+    const point: Record<string, number | string | null> = {
       time: index + 1,
       timestamp: label,
       displayTime: formatTime(label),
@@ -106,21 +106,27 @@ export function PriceChart({ chartData, beers }: PriceChartProps) {
 
     if (viewMode === 'sector') {
       Object.entries(chartData.sectorPriceHistory).forEach(([sector, prices]) => {
-        const price = prices[index] ?? 0;
-        point[sector] = price;
-        if (price > 0) {
-          minPrice = Math.min(minPrice, price);
-          maxPrice = Math.max(maxPrice, price);
+        const price = prices[index];
+        // Only add the property if price exists - undefined properties are ignored by Recharts
+        if (price !== null && price !== undefined) {
+          point[sector] = price;
+          if (price > 0) {
+            minPrice = Math.min(minPrice, price);
+            maxPrice = Math.max(maxPrice, price);
+          }
         }
       });
     } else {
       beers.forEach(beer => {
         if (selectedBeers.size === 0 || selectedBeers.has(beer.id)) {
           const prices = chartData.beerPriceHistory[beer.id] || [];
-          const price = prices[index] ?? beer.currentPrice;
-          point[beer.name] = price;
-          minPrice = Math.min(minPrice, price);
-          maxPrice = Math.max(maxPrice, price);
+          const price = prices[index];
+          // Only add the property if price exists - undefined properties are ignored by Recharts
+          if (price !== null && price !== undefined) {
+            point[beer.name] = price;
+            minPrice = Math.min(minPrice, price);
+            maxPrice = Math.max(maxPrice, price);
+          }
         }
       });
     }
