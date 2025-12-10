@@ -4,6 +4,22 @@ import { CATEGORIES } from 'shared';
 import { api, CreateBeerRequest, UpdateBeerRequest } from '../services/api';
 import { BeerForm, type BeerFormData } from './BeerForm';
 import { BeerListItem } from './BeerListItem';
+import { CATEGORY_STYLES, getCategoryBadgeStyle } from '../utils/styles';
+
+// Fetch existing categories from the database
+function useCategories() {
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    api.getCategories().then(setCategories).catch(() => {});
+  }, []);
+
+  const refetch = () => {
+    api.getCategories().then(setCategories).catch(() => {});
+  };
+
+  return { categories, refetch };
+}
 
 interface BeerManagementProps {
   beers: Beer[];
@@ -29,12 +45,14 @@ function beerToFormData(beer: Beer): BeerFormData {
 }
 
 export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManagementProps) {
-  const [activeTab, setActiveTab] = useState<'add' | 'manage'>('add');
+  const [activeTab, setActiveTab] = useState<'add' | 'manage' | 'categories'>('manage');
   const [formData, setFormData] = useState<BeerFormData>(initialFormData);
   const [editingBeer, setEditingBeer] = useState<Beer | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [deleteCategoryConfirm, setDeleteCategoryConfirm] = useState<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const { categories: existingCategories, refetch: refetchCategories } = useCategories();
 
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -43,6 +61,8 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
       if (e.key === 'Escape') {
         if (deleteConfirm !== null) {
           setDeleteConfirm(null);
+        } else if (deleteCategoryConfirm !== null) {
+          setDeleteCategoryConfirm(null);
         } else if (editingBeer !== null) {
           cancelEdit();
         } else {
@@ -53,7 +73,7 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, deleteConfirm, editingBeer]);
+  }, [onClose, deleteConfirm, deleteCategoryConfirm, editingBeer]);
 
   const startEdit = (beer: Beer) => {
     setEditingBeer(beer);
@@ -91,6 +111,7 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
         await api.updateBeer(editingBeer.id, updateData);
         onSuccess(`Beer "${formData.name.trim()}" updated successfully!`);
         cancelEdit();
+        refetchCategories();
       } else {
         const beerData: CreateBeerRequest = {
           name: formData.name.trim(),
@@ -102,6 +123,7 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
         await api.createBeer(beerData);
         onSuccess(`Beer "${beerData.name}" added successfully!`);
         setFormData(initialFormData);
+        refetchCategories();
       }
     } catch (error) {
       onError(error instanceof Error ? error.message : editingBeer ? 'Failed to update beer' : 'Failed to add beer');
@@ -121,12 +143,38 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
       await api.deleteBeer(beer.id);
       onSuccess(`Beer "${beer.name}" deleted successfully!`);
       setDeleteConfirm(null);
+      refetchCategories();
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Failed to delete beer');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleDeleteCategory = async (category: string) => {
+    if (deleteCategoryConfirm !== category) {
+      setDeleteCategoryConfirm(category);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await api.deleteCategory(category);
+      onSuccess(result.message);
+      setDeleteCategoryConfirm(null);
+      refetchCategories();
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Failed to delete category');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Count beers per category
+  const beerCountByCategory = beers.reduce((acc, beer) => {
+    acc[beer.category] = (acc[beer.category] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   const sortedBeers = [...beers].sort((a, b) => {
     const catOrder = CATEGORIES.indexOf(a.category as typeof CATEGORIES[number]) - CATEGORIES.indexOf(b.category as typeof CATEGORIES[number]);
@@ -180,6 +228,20 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
           <button
             onClick={() => {
               if (editingBeer) cancelEdit();
+              setActiveTab('manage');
+            }}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'manage'
+                ? 'text-[#e94560] border-b-2 border-[#e94560]'
+                : 'hover:bg-white/5'
+            }`}
+            style={{ color: activeTab === 'manage' ? undefined : 'var(--text-secondary)' }}
+          >
+            Beers ({beers.length})
+          </button>
+          <button
+            onClick={() => {
+              if (editingBeer) cancelEdit();
               setActiveTab('add');
             }}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
@@ -194,16 +256,17 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
           <button
             onClick={() => {
               if (editingBeer) cancelEdit();
-              setActiveTab('manage');
+              setActiveTab('categories');
+              setDeleteCategoryConfirm(null);
             }}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'manage'
+              activeTab === 'categories'
                 ? 'text-[#e94560] border-b-2 border-[#e94560]'
                 : 'hover:bg-white/5'
             }`}
-            style={{ color: activeTab === 'manage' ? undefined : 'var(--text-secondary)' }}
+            style={{ color: activeTab === 'categories' ? undefined : 'var(--text-secondary)' }}
           >
-            Manage ({beers.length})
+            Categories ({existingCategories.length})
           </button>
         </div>
 
@@ -214,10 +277,52 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
               formData={formData}
               editingBeer={editingBeer}
               isSubmitting={isSubmitting}
+              existingCategories={existingCategories}
               onFormChange={setFormData}
               onSubmit={handleSubmit}
               onCancel={cancelEdit}
             />
+          ) : activeTab === 'categories' ? (
+            <div className="space-y-2">
+              {existingCategories.length === 0 ? (
+                <p className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
+                  No categories yet
+                </p>
+              ) : (
+                existingCategories.map((category) => (
+                  <div
+                    key={category}
+                    className="flex items-center justify-between p-3 rounded-lg"
+                    style={{ background: 'var(--bg-tertiary)' }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`badge capitalize ${CATEGORY_STYLES[category] || ''}`} style={getCategoryBadgeStyle(category, existingCategories)}>
+                        {category}
+                      </span>
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {beerCountByCategory[category] || 0} beer{(beerCountByCategory[category] || 0) !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteCategory(category)}
+                      disabled={isSubmitting}
+                      className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                        deleteCategoryConfirm === category
+                          ? 'bg-red-500 text-white'
+                          : 'text-red-400 hover:bg-red-500/20'
+                      }`}
+                    >
+                      {deleteCategoryConfirm === category ? 'Confirm Delete' : 'Delete'}
+                    </button>
+                  </div>
+                ))
+              )}
+              {existingCategories.length > 0 && (
+                <p className="text-xs mt-4 text-center" style={{ color: 'var(--text-secondary)' }}>
+                  Deleting a category will remove all beers in that category
+                </p>
+              )}
+            </div>
           ) : (
             <div className="space-y-2">
               {sortedBeers.length === 0 ? (

@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: barboursier
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: CLIENT_URL
+        sync: false  # À configurer manuellement avec l'URL Render
+      - key: GOOGLE_CLIENT_ID
+        sync: false  # Secret - à configurer manuellement
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false  # Secret - à configurer manuellement
+      - key: OAUTH_CALLBACK_URL
+        sync: false  # À configurer avec https://barboursier.onrender.com/api/auth/google/callback
+      - key: JWT_SECRET
+        generateValue: true  # Render génère automatiquement
+      - key: SUPERADMIN_EMAIL
+        sync: false  # À configurer manuellement
+      - key: LOG_LEVEL
+        value: info

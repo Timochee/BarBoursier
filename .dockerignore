@@ -44,7 +44,7 @@ Dockerfile*
 docker-compose*.yml
 .dockerignore
 Caddyfile
-fly.toml
+render.yaml
 
 # GitHub/CI (not needed in image)
 .github

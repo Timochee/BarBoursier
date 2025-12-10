@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { CATEGORIES, DEFAULT_SETTINGS, VALIDATION } from 'shared';
+import { DEFAULT_SETTINGS, VALIDATION } from 'shared';
 import { beerRepository } from '../repositories';
 import { emitBeersUpdated } from '../socket';
 import { superadminMiddleware } from '../middleware/auth';
@@ -13,9 +13,10 @@ router.get('/', (req, res) => {
   res.json(beers);
 });
 
-// GET /api/beers/categories - Get all categories
+// GET /api/beers/categories - Get all categories from existing beers
 router.get('/categories', (req, res) => {
-  res.json(CATEGORIES);
+  const categories = beerRepository.getCategories();
+  res.json(categories);
 });
 
 // GET /api/beers/:id - Get beer by ID
@@ -53,8 +54,8 @@ router.post('/', superadminMiddleware as any, (req, res) => {
     return;
   }
 
-  if (!category || !CATEGORIES.includes(category)) {
-    res.status(400).json({ error: `Category must be one of: ${CATEGORIES.join(', ')}` });
+  if (!category || typeof category !== 'string' || category.trim().length === 0) {
+    res.status(400).json({ error: 'Category is required' });
     return;
   }
 
@@ -109,8 +110,8 @@ router.put('/:id', superadminMiddleware as any, (req, res) => {
     return;
   }
 
-  if (category !== undefined && !CATEGORIES.includes(category)) {
-    res.status(400).json({ error: `Category must be one of: ${CATEGORIES.join(', ')}` });
+  if (category !== undefined && (typeof category !== 'string' || category.trim().length === 0)) {
+    res.status(400).json({ error: 'Category cannot be empty' });
     return;
   }
 
@@ -166,6 +167,28 @@ router.delete('/:id', superadminMiddleware as any, (req, res) => {
   } catch (error) {
     logger.error({error}, 'Error deleting beer');
     res.status(500).json({ error: 'Failed to delete beer' });
+  }
+});
+
+// DELETE /api/beers/category/:category - Delete all beers in a category (Superadmin only)
+router.delete('/category/:category', superadminMiddleware as any, (req, res) => {
+  const { category } = req.params;
+
+  const beersInCategory = beerRepository.getByCategory(category);
+  if (beersInCategory.length === 0) {
+    res.status(404).json({ error: 'Category not found or empty' });
+    return;
+  }
+
+  try {
+    const deletedCount = beerRepository.deleteByCategory(category);
+    // Notify all clients about the deleted beers
+    emitBeersUpdated();
+
+    res.json({ success: true, message: `Category "${category}" deleted (${deletedCount} beers)`, deletedCount });
+  } catch (error) {
+    logger.error({error}, 'Error deleting category');
+    res.status(500).json({ error: 'Failed to delete category' });
   }
 });
 

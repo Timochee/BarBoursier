@@ -1,5 +1,5 @@
 import type { Beer } from 'shared';
-import { CATEGORY_STYLES } from '../utils/styles';
+import { CATEGORY_STYLES, getCategoryBadgeStyle } from '../utils/styles';
 
 interface BeerListItemProps {
   beer: Beer;
@@ -22,7 +22,7 @@ export function BeerListItem({
       style={{ background: 'var(--bg-tertiary)' }}
     >
       <div className="flex items-center gap-3">
-        <span className={`badge ${CATEGORY_STYLES[beer.category]}`}>
+        <span className={`badge ${CATEGORY_STYLES[beer.category] || ''}`} style={getCategoryBadgeStyle(beer.category)}>
           {beer.category}
         </span>
         <div>

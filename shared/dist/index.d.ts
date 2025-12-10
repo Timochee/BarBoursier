@@ -27,8 +27,8 @@ export interface PurchaseImpact {
 }
 export interface ChartData {
     timeLabels: string[];
-    sectorPriceHistory: Record<string, number[]>;
-    beerPriceHistory: Record<number, number[]>;
+    sectorPriceHistory: Record<string, (number | null)[]>;
+    beerPriceHistory: Record<number, (number | null)[]>;
     transactionCount: number;
 }
 export interface MarketStats {

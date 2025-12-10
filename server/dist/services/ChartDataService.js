@@ -10,26 +10,45 @@ class ChartDataService {
         // Calculate sector price history (average prices per category)
         const sectorPriceHistory = {};
         const sectors = [...new Set(beers.map(b => b.category))];
+        // Get the max history length
+        const maxLength = Math.max(...Array.from(beerPriceHistory.values()).map(h => h.length), 0);
         for (const sector of sectors) {
             sectorPriceHistory[sector] = [];
             const sectorBeers = beers.filter(b => b.category === sector);
-            const beerCount = sectorBeers.length;
-            // For each time point, calculate average price of beers in this sector
-            const maxLength = Math.max(...Array.from(beerPriceHistory.values()).map(h => h.length), 0);
+            // For each time point, calculate average price of beers that have data at that point
             for (let i = 0; i < maxLength; i++) {
                 let sectorTotal = 0;
+                let beersWithData = 0;
                 for (const beer of sectorBeers) {
                     const history = beerPriceHistory.get(beer.id) || [];
-                    sectorTotal += history[i] ?? beer.currentPrice;
+                    // Only include beers that have data at this time point
+                    if (history.length > i) {
+                        sectorTotal += history[i];
+                        beersWithData++;
+                    }
                 }
-                const average = beerCount > 0 ? sectorTotal / beerCount : 0;
-                sectorPriceHistory[sector].push(Math.round(average * 100) / 100);
+                // Only add a data point if we have beers with data
+                if (beersWithData > 0) {
+                    const average = sectorTotal / beersWithData;
+                    sectorPriceHistory[sector].push(Math.round(average * 100) / 100);
+                }
+                else {
+                    // No data for this sector at this time point - use null
+                    sectorPriceHistory[sector].push(null);
+                }
             }
         }
-        // Convert Map to Record for beerPriceHistory
+        // Convert Map to Record for beerPriceHistory, padding with null for missing early entries
         const beerPriceHistoryRecord = {};
         beerPriceHistory.forEach((prices, beerId) => {
-            beerPriceHistoryRecord[beerId] = prices;
+            // Pad the beginning with null if this beer was added later
+            const paddedPrices = [];
+            const missingCount = maxLength - prices.length;
+            for (let i = 0; i < missingCount; i++) {
+                paddedPrices.push(null);
+            }
+            paddedPrices.push(...prices);
+            beerPriceHistoryRecord[beerId] = paddedPrices;
         });
         return {
             timeLabels,

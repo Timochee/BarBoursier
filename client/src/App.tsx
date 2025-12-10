@@ -15,6 +15,7 @@ import {
   AdminManagement,
   PresetManagement,
 } from './components';
+import { CATEGORY_STYLES, getCategoryBadgeStyle } from './utils/styles';
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ function AppContent() {
   const [showHistory, setShowHistory] = useState(false);
   const [showImpact, setShowImpact] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showBeerManagement, setShowBeerManagement] = useState(false);
   const [showAdminManagement, setShowAdminManagement] = useState(false);
   const [showPresetManagement, setShowPresetManagement] = useState(false);
@@ -105,6 +107,16 @@ function AppContent() {
     success('Market has been reset');
   };
 
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    logout();
+    setShowLogoutConfirm(false);
+    success('Logged out successfully');
+  };
+
   return (
     <div
       className={`min-h-screen transition-colors duration-300 ${theme}`}
@@ -120,7 +132,7 @@ function AppContent() {
         isAuthLoading={isAuthLoading}
         user={user}
         onLogin={login}
-        onLogout={logout}
+        onLogout={handleLogout}
         theme={theme}
         onToggleTheme={toggleTheme}
         onShowBeerManagement={() => setShowBeerManagement(true)}
@@ -194,22 +206,26 @@ function AppContent() {
               >
                 Clear
               </button>
-              {(['pils', 'abbey', 'trappist', 'specialty'] as const).map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
-                  className={`badge badge-${cat} cursor-pointer transition-all ${
-                    categoryFilter === null
-                      ? 'opacity-100'
-                      : categoryFilter === cat
-                        ? 'opacity-100 ring-2 ring-white/50'
-                        : 'opacity-40'
-                  }`}
-                  aria-pressed={categoryFilter === cat}
-                >
-                  {cat}
-                </button>
-              ))}
+              {(() => {
+                const categories = [...new Set(beers.map(b => b.category))].sort();
+                return categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
+                    className={`badge ${CATEGORY_STYLES[cat] || ''} cursor-pointer transition-all capitalize ${
+                      categoryFilter === null
+                        ? 'opacity-100'
+                        : categoryFilter === cat
+                          ? 'opacity-100 ring-2 ring-white/50'
+                          : 'opacity-40'
+                    }`}
+                    style={getCategoryBadgeStyle(cat, categories)}
+                    aria-pressed={categoryFilter === cat}
+                  >
+                    {cat}
+                  </button>
+                ));
+              })()}
             </div>
           </div>
           {isLoading ? (
@@ -281,6 +297,18 @@ function AppContent() {
           variant="danger"
           onConfirm={confirmReset}
           onCancel={() => setShowResetConfirm(false)}
+        />
+      )}
+
+      {showLogoutConfirm && (
+        <ConfirmDialog
+          title="Logout"
+          message="Are you sure you want to logout?"
+          confirmLabel="Logout"
+          cancelLabel="Cancel"
+          variant="warning"
+          onConfirm={confirmLogout}
+          onCancel={() => setShowLogoutConfirm(false)}
         />
       )}
 

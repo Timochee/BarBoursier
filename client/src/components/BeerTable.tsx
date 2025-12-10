@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Beer } from 'shared';
 import { createBeerColorMap, getBeerColor } from '../utils/colors';
-import { CATEGORY_STYLES } from '../utils/styles';
+import { CATEGORY_STYLES, getCategoryBadgeStyle } from '../utils/styles';
 import { getChangeClass, PriceArrow } from '../utils/priceChange';
 import { useBeerSort, useBuyQuantity, type SortField } from '../hooks';
 
@@ -103,7 +103,7 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
               <tr key={beer.id} className="table-row group">
                 <td className="p-4 hidden sm:table-cell">
                   {showCategoryBadge && (
-                    <span className={`badge ${CATEGORY_STYLES[beer.category]}`}>
+                    <span className={`badge ${CATEGORY_STYLES[beer.category] || ''}`} style={getCategoryBadgeStyle(beer.category)}>
                       {beer.category}
                     </span>
                   )}

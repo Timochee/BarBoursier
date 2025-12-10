@@ -12,9 +12,10 @@ router.get('/', (req, res) => {
     const beers = repositories_1.beerRepository.getAll();
     res.json(beers);
 });
-// GET /api/beers/categories - Get all categories
+// GET /api/beers/categories - Get all categories from existing beers
 router.get('/categories', (req, res) => {
-    res.json(shared_1.CATEGORIES);
+    const categories = repositories_1.beerRepository.getCategories();
+    res.json(categories);
 });
 // GET /api/beers/:id - Get beer by ID
 router.get('/:id', (req, res) => {
@@ -44,8 +45,8 @@ router.post('/', auth_1.superadminMiddleware, (req, res) => {
         res.status(400).json({ error: `Base price must be between ${shared_1.DEFAULT_SETTINGS.minPrice} and ${shared_1.DEFAULT_SETTINGS.maxPrice}` });
         return;
     }
-    if (!category || !shared_1.CATEGORIES.includes(category)) {
-        res.status(400).json({ error: `Category must be one of: ${shared_1.CATEGORIES.join(', ')}` });
+    if (!category || typeof category !== 'string' || category.trim().length === 0) {
+        res.status(400).json({ error: 'Category is required' });
         return;
     }
     if (typeof volatility !== 'number' || volatility < shared_1.VALIDATION.volatility.min || volatility > shared_1.VALIDATION.volatility.max) {
@@ -91,8 +92,8 @@ router.put('/:id', auth_1.superadminMiddleware, (req, res) => {
         res.status(400).json({ error: `Base price must be between ${shared_1.DEFAULT_SETTINGS.minPrice} and ${shared_1.DEFAULT_SETTINGS.maxPrice}` });
         return;
     }
-    if (category !== undefined && !shared_1.CATEGORIES.includes(category)) {
-        res.status(400).json({ error: `Category must be one of: ${shared_1.CATEGORIES.join(', ')}` });
+    if (category !== undefined && (typeof category !== 'string' || category.trim().length === 0)) {
+        res.status(400).json({ error: 'Category cannot be empty' });
         return;
     }
     if (volatility !== undefined && (typeof volatility !== 'number' || volatility < shared_1.VALIDATION.volatility.min || volatility > shared_1.VALIDATION.volatility.max)) {
@@ -142,6 +143,25 @@ router.delete('/:id', auth_1.superadminMiddleware, (req, res) => {
     catch (error) {
         logger_1.logger.error({ error }, 'Error deleting beer');
         res.status(500).json({ error: 'Failed to delete beer' });
+    }
+});
+// DELETE /api/beers/category/:category - Delete all beers in a category (Superadmin only)
+router.delete('/category/:category', auth_1.superadminMiddleware, (req, res) => {
+    const { category } = req.params;
+    const beersInCategory = repositories_1.beerRepository.getByCategory(category);
+    if (beersInCategory.length === 0) {
+        res.status(404).json({ error: 'Category not found or empty' });
+        return;
+    }
+    try {
+        const deletedCount = repositories_1.beerRepository.deleteByCategory(category);
+        // Notify all clients about the deleted beers
+        (0, socket_1.emitBeersUpdated)();
+        res.json({ success: true, message: `Category "${category}" deleted (${deletedCount} beers)`, deletedCount });
+    }
+    catch (error) {
+        logger_1.logger.error({ error }, 'Error deleting category');
+        res.status(500).json({ error: 'Failed to delete category' });
     }
 });
 exports.default = router;

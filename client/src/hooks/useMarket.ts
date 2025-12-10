@@ -43,6 +43,7 @@ export function useMarket(handlers?: MarketEventHandlers) {
         // Beer list changed (add/remove/update)
         setBeers(updatedBeers);
         refreshStats();
+        refreshChartData();
       },
       onPurchaseResult: (result) => {
         setLastPurchase(result);

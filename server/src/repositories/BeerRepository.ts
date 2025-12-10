@@ -154,6 +154,30 @@ export class BeerRepository {
     const rows = stmt.all() as { category: string }[];
     return rows.map(r => r.category);
   }
+
+  deleteByCategory(category: string): number {
+    // Get all beer IDs in this category
+    const beers = this.getByCategory(category);
+    const beerIds = beers.map(b => b.id);
+
+    if (beerIds.length === 0) return 0;
+
+    // Delete in a transaction
+    const deleteAll = db.transaction(() => {
+      for (const id of beerIds) {
+        // Delete related price history
+        db.prepare('DELETE FROM price_history WHERE beer_id = ?').run(id);
+        // Delete related transactions
+        db.prepare('DELETE FROM transactions WHERE beer_id = ?').run(id);
+      }
+      // Delete all beers in category
+      const placeholders = beerIds.map(() => '?').join(',');
+      db.prepare(`DELETE FROM beers WHERE id IN (${placeholders})`).run(...beerIds);
+    });
+
+    deleteAll();
+    return beerIds.length;
+  }
 }
 
 export const beerRepository = new BeerRepository();

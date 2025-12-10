@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { ChartData, Beer } from 'shared';
-import { SECTOR_COLORS, createBeerColorMap, getBeerColor } from '../utils/colors';
+import { getSectorColor, createBeerColorMap, getBeerColor } from '../utils/colors';
 
 interface PriceChartProps {
   chartData: ChartData | null;
@@ -267,17 +267,21 @@ export function PriceChart({ chartData, beers }: PriceChartProps) {
           />
 
           {viewMode === 'sector' ? (
-            Object.keys(chartData.sectorPriceHistory).map(sector => (
-              <Line
-                key={sector}
-                type="monotone"
-                dataKey={sector}
-                stroke={SECTOR_COLORS[sector] || '#888'}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 6, strokeWidth: 2 }}
-              />
-            ))
+            (() => {
+              const sectors = Object.keys(chartData.sectorPriceHistory);
+              return sectors.map(sector => (
+                <Line
+                  key={sector}
+                  type="monotone"
+                  dataKey={sector}
+                  stroke={getSectorColor(sector, sectors)}
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 6, strokeWidth: 2 }}
+                  connectNulls={false}
+                />
+              ));
+            })()
           ) : (
             beers
               .filter(beer => selectedBeers.size === 0 || selectedBeers.has(beer.id))
@@ -290,6 +294,7 @@ export function PriceChart({ chartData, beers }: PriceChartProps) {
                   strokeWidth={2}
                   dot={false}
                   activeDot={{ r: 6, strokeWidth: 2 }}
+                  connectNulls={false}
                 />
               ))
           )}

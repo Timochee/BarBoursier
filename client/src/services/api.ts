@@ -130,6 +130,10 @@ export const api = {
     fetchJson<{ success: boolean; message: string }>(`/beers/${id}`, {
       method: 'DELETE',
     }),
+  deleteCategory: (category: string) =>
+    fetchJson<{ success: boolean; message: string; deletedCount: number }>(`/beers/category/${encodeURIComponent(category)}`, {
+      method: 'DELETE',
+    }),
 
   // Market
   buy: (request: BuyRequest) =>

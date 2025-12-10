@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import type { Beer } from 'shared';
 import { CATEGORIES } from 'shared';
-import { CATEGORY_STYLES, DEFAULT_VOLATILITY } from '../utils/styles';
+import { CATEGORY_STYLES, DEFAULT_VOLATILITY, getCategoryBadgeStyle } from '../utils/styles';
 
 interface BeerFormData {
   name: string;
@@ -13,6 +14,7 @@ interface BeerFormProps {
   formData: BeerFormData;
   editingBeer: Beer | null;
   isSubmitting: boolean;
+  existingCategories?: string[];
   onFormChange: (data: BeerFormData) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
@@ -24,16 +26,47 @@ export function BeerForm({
   formData,
   editingBeer,
   isSubmitting,
+  existingCategories = [],
   onFormChange,
   onSubmit,
   onCancel,
 }: BeerFormProps) {
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
+
+  // Combine default categories with existing ones from the database
+  const allCategories = [...new Set([...CATEGORIES, ...existingCategories])];
+
   const handleCategoryChange = (category: string) => {
+    setShowCustomCategory(false);
     onFormChange({
       ...formData,
       category,
       volatility: editingBeer ? formData.volatility : (DEFAULT_VOLATILITY[category]?.toString() || '0.30'),
     });
+  };
+
+  const handleCustomCategoryToggle = () => {
+    setShowCustomCategory(true);
+    setCustomCategory('');
+    onFormChange({
+      ...formData,
+      category: '',
+      volatility: '0.30',
+    });
+  };
+
+  const handleCustomCategoryChange = (value: string) => {
+    const normalized = value.toLowerCase().replace(/[^a-z0-9]/g, '');
+    setCustomCategory(normalized);
+    onFormChange({
+      ...formData,
+      category: normalized,
+    });
+  };
+
+  const getCategoryClass = (cat: string) => {
+    return CATEGORY_STYLES[cat] || '';
   };
 
   return (
@@ -62,23 +95,58 @@ export function BeerForm({
           Category
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {CATEGORIES.map((cat) => (
+          {allCategories.map((cat) => (
             <button
               key={cat}
               type="button"
               onClick={() => handleCategoryChange(cat)}
               className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all ${
-                formData.category === cat
+                formData.category === cat && !showCustomCategory
                   ? 'ring-2 ring-[#e94560]'
                   : 'opacity-60 hover:opacity-100'
               }`}
               style={{ background: 'var(--bg-tertiary)' }}
               disabled={isSubmitting}
             >
-              <span className={`badge ${CATEGORY_STYLES[cat]}`}>{cat}</span>
+              <span className={`badge ${getCategoryClass(cat)}`} style={getCategoryBadgeStyle(cat, allCategories)}>{cat}</span>
             </button>
           ))}
+          {/* New Category Button */}
+          <button
+            type="button"
+            onClick={handleCustomCategoryToggle}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              showCustomCategory
+                ? 'ring-2 ring-[#e94560]'
+                : 'opacity-60 hover:opacity-100'
+            }`}
+            style={{ background: 'var(--bg-tertiary)' }}
+            disabled={isSubmitting}
+          >
+            <span className="badge bg-gradient-to-r from-pink-500/20 to-purple-500/20 text-pink-300">
+              + New
+            </span>
+          </button>
         </div>
+
+        {/* Custom Category Input */}
+        {showCustomCategory && (
+          <div className="mt-3">
+            <input
+              type="text"
+              value={customCategory}
+              onChange={(e) => handleCustomCategoryChange(e.target.value)}
+              placeholder="Enter new category name (e.g., ipa, lager, wheat)"
+              className="w-full px-4 py-3 rounded-lg text-sm"
+              style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border-color)' }}
+              disabled={isSubmitting}
+              autoFocus
+            />
+            <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+              Lowercase letters and numbers only
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Price and Volatility */}
@@ -142,7 +210,7 @@ export function BeerForm({
         )}
         <button
           type="submit"
-          disabled={isSubmitting || !formData.name.trim()}
+          disabled={isSubmitting || !formData.name.trim() || !formData.category.trim()}
           className={`${editingBeer ? 'flex-1' : 'w-full'} btn btn-primary py-3 flex items-center justify-center gap-2`}
         >
           {isSubmitting ? (
