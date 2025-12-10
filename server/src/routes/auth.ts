@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import passport from 'passport';
-import { generateToken, authMiddleware, AuthRequest, isOAuthConfigured, isAdminOrAbove } from '../middleware/auth';
+import { generateToken, authMiddleware, isOAuthConfigured, isAdminOrAbove } from '../middleware/auth';
 import { logger } from '../logger';
 
 const router = Router();
@@ -50,14 +50,13 @@ router.get('/google/callback', (req: Request, res: Response, next: NextFunction)
 });
 
 // GET /api/auth/verify - Verify if token is still valid
-router.get('/verify', authMiddleware as any, (req, res) => {
-  const authReq = req as AuthRequest;
+router.get('/verify', authMiddleware, (req, res) => {
   res.json({
     valid: true,
-    isAdmin: isAdminOrAbove(authReq.user!.role),
-    isSuperadmin: authReq.user!.role === 'superadmin',
-    role: authReq.user!.role,
-    user: authReq.user
+    isAdmin: isAdminOrAbove(req.user!.role!),
+    isSuperadmin: req.user!.role === 'superadmin',
+    role: req.user!.role,
+    user: req.user
   });
 });
 

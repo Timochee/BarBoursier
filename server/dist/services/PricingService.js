@@ -8,136 +8,144 @@ class PricingService {
     }
     /**
      * Calculate all price changes after a beer purchase
-     * Ensures zero-sum market by using a two-pass approach:
-     * 1. First pass: calculate all decreases with rounding
-     * 2. Adjust one beer to compensate for any rounding difference
+     * Ensures zero-sum market using a two-pass approach
      */
     calculatePriceChanges(beers, purchasedBeer, quantity) {
-        const updates = [];
-        const sectorChanges = {};
-        const beerChanges = {};
-        // Initialize sector changes
-        const sectors = [...new Set(beers.map(b => b.category))];
-        sectors.forEach(s => { sectorChanges[s] = 0; beerChanges[s] = {}; });
-        // 1. Calculate base increase for purchased beer
+        // Initialize context
+        const ctx = this.initializeContext(beers);
+        // Calculate base increase for purchased beer
         const purchasedEffectiveVol = this.calculateEffectiveVolatility(purchasedBeer);
         const rawPriceIncrease = this.settings.baseMove * purchasedEffectiveVol * purchasedBeer.currentPrice * Math.sqrt(quantity);
-        // 2. Calculate correlated increases for same-sector beers
+        // Calculate correlated increases for same-sector beers
         const sameSectorBeers = beers.filter(b => b.category === purchasedBeer.category && b.id !== purchasedBeer.id);
-        const rawCorrelatedIncreases = new Map();
+        const correlatedIncreases = this.calculateCorrelatedIncreases(sameSectorBeers, rawPriceIncrease, purchasedEffectiveVol);
+        // Calculate decrease weights for other sector beers
+        const otherSectorBeers = beers.filter(b => b.category !== purchasedBeer.category);
+        const { weights: decreaseWeights, totalWeight } = this.calculateDecreaseWeights(otherSectorBeers, purchasedBeer);
+        // Apply increases (purchased beer + same sector)
+        this.applyPurchasedBeerIncrease(ctx, purchasedBeer, rawPriceIncrease);
+        this.applySameSectorIncreases(ctx, sameSectorBeers, correlatedIncreases);
+        // Calculate decreases for other sectors (first pass)
+        const otherBeerResults = this.calculateDecreases(otherSectorBeers, decreaseWeights, totalWeight, ctx.totalActualIncrease);
+        // Balance to achieve zero-sum (second pass)
+        this.balanceZeroSum(otherBeerResults, ctx.totalActualIncrease);
+        // Finalize other beer updates
+        this.finalizeOtherBeerUpdates(ctx, otherBeerResults);
+        return {
+            updates: ctx.updates,
+            impact: {
+                purchasedBeerName: purchasedBeer.name,
+                quantity,
+                sectorChanges: ctx.sectorChanges,
+                beerChanges: ctx.beerChanges,
+            },
+        };
+    }
+    // --- Private helper methods (extracted for KISS) ---
+    initializeContext(beers) {
+        const sectorChanges = {};
+        const beerChanges = {};
+        const sectors = [...new Set(beers.map(b => b.category))];
+        sectors.forEach(s => { sectorChanges[s] = 0; beerChanges[s] = {}; });
+        return { updates: [], sectorChanges, beerChanges, totalActualIncrease: 0 };
+    }
+    calculateCorrelatedIncreases(sameSectorBeers, rawPriceIncrease, purchasedEffectiveVol) {
+        const correlatedIncreases = new Map();
         for (const beer of sameSectorBeers) {
             const beerEffectiveVol = this.calculateEffectiveVolatility(beer);
             const relativeVolatility = beerEffectiveVol / purchasedEffectiveVol;
             const correlatedIncrease = rawPriceIncrease * this.settings.sectorCorrelation * relativeVolatility;
-            rawCorrelatedIncreases.set(beer.id, correlatedIncrease);
+            correlatedIncreases.set(beer.id, correlatedIncrease);
         }
-        // 3. Calculate decrease weights for other sector beers
-        const otherSectorBeers = beers.filter(b => b.category !== purchasedBeer.category);
-        const decreaseWeights = new Map();
+        return correlatedIncreases;
+    }
+    calculateDecreaseWeights(otherSectorBeers, purchasedBeer) {
+        const weights = new Map();
         let totalWeight = 0;
         for (const beer of otherSectorBeers) {
             const matrixWeight = shared_1.SECTOR_MATRIX[purchasedBeer.category]?.[beer.category] ?? 0.5;
             const volatilityWeight = this.calculateEffectiveVolatility(beer);
             const combinedWeight = matrixWeight * volatilityWeight;
-            decreaseWeights.set(beer.id, combinedWeight);
+            weights.set(beer.id, combinedWeight);
             totalWeight += combinedWeight;
         }
-        // 4. Apply increases first and track actual changes after rounding
-        let totalActualIncrease = 0;
-        // Purchased beer: increase + mean reversion
-        const purchasedMeanReversion = this.calculateMeanReversion(purchasedBeer);
-        let newPurchasedPrice = this.roundToQuarter(purchasedBeer.currentPrice + rawPriceIncrease + purchasedMeanReversion);
-        newPurchasedPrice = this.clampPrice(newPurchasedPrice);
-        const purchasedChange = newPurchasedPrice - purchasedBeer.currentPrice;
-        totalActualIncrease += purchasedChange;
-        updates.push({ id: purchasedBeer.id, price: newPurchasedPrice });
-        beerChanges[purchasedBeer.category][purchasedBeer.name] = purchasedChange;
-        sectorChanges[purchasedBeer.category] += purchasedChange;
-        // Same sector beers: correlated increase + mean reversion
+        return { weights, totalWeight };
+    }
+    applyPurchasedBeerIncrease(ctx, beer, rawPriceIncrease) {
+        const meanReversion = this.calculateMeanReversion(beer);
+        let newPrice = this.roundToQuarter(beer.currentPrice + rawPriceIncrease + meanReversion);
+        newPrice = this.clampPrice(newPrice);
+        const change = newPrice - beer.currentPrice;
+        ctx.totalActualIncrease += change;
+        ctx.updates.push({ id: beer.id, price: newPrice });
+        ctx.beerChanges[beer.category][beer.name] = change;
+        ctx.sectorChanges[beer.category] += change;
+    }
+    applySameSectorIncreases(ctx, sameSectorBeers, correlatedIncreases) {
         for (const beer of sameSectorBeers) {
-            const rawCorrelatedIncrease = rawCorrelatedIncreases.get(beer.id) || 0;
+            const rawCorrelatedIncrease = correlatedIncreases.get(beer.id) || 0;
             const meanReversion = this.calculateMeanReversion(beer);
             let newPrice = this.roundToQuarter(beer.currentPrice + rawCorrelatedIncrease + meanReversion);
             newPrice = this.clampPrice(newPrice);
             const change = newPrice - beer.currentPrice;
-            totalActualIncrease += change;
-            updates.push({ id: beer.id, price: newPrice });
-            beerChanges[beer.category][beer.name] = change;
-            sectorChanges[beer.category] += change;
+            ctx.totalActualIncrease += change;
+            ctx.updates.push({ id: beer.id, price: newPrice });
+            ctx.beerChanges[beer.category][beer.name] = change;
+            ctx.sectorChanges[beer.category] += change;
         }
-        // 5. First pass: calculate all decreases with rounding
-        // Store preliminary results for other sector beers
-        const otherBeerResults = [];
-        // Sort beers by weight (highest first) - higher weighted beers absorb more
-        const sortedOtherBeers = [...otherSectorBeers].sort((a, b) => {
-            const weightA = decreaseWeights.get(a.id) || 0;
-            const weightB = decreaseWeights.get(b.id) || 0;
-            return weightB - weightA;
+    }
+    calculateDecreases(otherSectorBeers, decreaseWeights, totalWeight, totalActualIncrease) {
+        const results = [];
+        // Sort by weight (highest first) - higher weighted beers absorb more
+        const sortedBeers = [...otherSectorBeers].sort((a, b) => {
+            return (decreaseWeights.get(b.id) || 0) - (decreaseWeights.get(a.id) || 0);
         });
-        for (const beer of sortedOtherBeers) {
+        for (const beer of sortedBeers) {
             const weight = decreaseWeights.get(beer.id) || 0;
             const share = totalWeight > 0 ? weight / totalWeight : 0;
-            // Calculate target decrease for this beer
+            // Calculate target decrease with protections
             let targetDecrease = totalActualIncrease * share;
-            // Protection 1: Max 10% decrease per transaction
-            targetDecrease = Math.min(targetDecrease, beer.currentPrice * shared_1.MAX_DECREASE_RATIO);
-            // Protection 2: Brake near floor
+            targetDecrease = Math.min(targetDecrease, beer.currentPrice * shared_1.MAX_DECREASE_RATIO); // Max 10%
+            // Brake near floor
             const distanceToFloor = (beer.currentPrice - this.settings.minPrice) / beer.currentPrice;
-            const protectionFactor = Math.min(1.0, distanceToFloor * 2);
-            targetDecrease *= protectionFactor;
-            // Apply mean reversion
+            targetDecrease *= Math.min(1.0, distanceToFloor * 2);
+            // Apply mean reversion and calculate new price
             const meanReversion = this.calculateMeanReversion(beer);
-            // Calculate new price with decrease + mean reversion
-            let newPrice = beer.currentPrice - targetDecrease + meanReversion;
-            // Round to quarter
-            newPrice = this.roundToQuarter(newPrice);
-            // Protection 3: Absolute floor
+            let newPrice = this.roundToQuarter(beer.currentPrice - targetDecrease + meanReversion);
             newPrice = Math.max(newPrice, this.settings.minPrice);
             newPrice = this.clampPrice(newPrice);
-            const change = newPrice - beer.currentPrice;
-            otherBeerResults.push({ beer, newPrice, change });
+            results.push({ beer, newPrice, change: newPrice - beer.currentPrice });
         }
-        // 6. Calculate total decrease and find the imbalance
-        let totalActualDecrease = otherBeerResults.reduce((sum, r) => sum + Math.abs(r.change), 0);
-        let imbalance = totalActualIncrease - totalActualDecrease;
-        // 7. Second pass: adjust prices to achieve zero-sum
-        // Distribute 0.25€ adjustments across beers until balanced
+        return results;
+    }
+    balanceZeroSum(results, totalActualIncrease) {
+        const totalDecrease = results.reduce((sum, r) => sum + Math.abs(r.change), 0);
+        let imbalance = totalActualIncrease - totalDecrease;
+        // Distribute 0.25€ adjustments until balanced
         while (Math.abs(imbalance) >= 0.20) {
             let adjusted = false;
-            for (const result of otherBeerResults) {
+            for (const result of results) {
                 if (Math.abs(imbalance) < 0.20)
                     break;
-                // If imbalance > 0, we need more decrease (lower price by 0.25)
-                // If imbalance < 0, we need less decrease (raise price by 0.25)
-                const adjustmentNeeded = imbalance > 0 ? -0.25 : 0.25;
-                const newAdjustedPrice = result.newPrice + adjustmentNeeded;
-                // Check if adjustment is valid (within bounds)
-                if (newAdjustedPrice >= this.settings.minPrice && newAdjustedPrice <= this.settings.maxPrice) {
-                    result.newPrice = newAdjustedPrice;
-                    result.change = result.newPrice - result.beer.currentPrice;
-                    imbalance += adjustmentNeeded; // Negative adjustment reduces positive imbalance
+                const adjustment = imbalance > 0 ? -0.25 : 0.25;
+                const newPrice = result.newPrice + adjustment;
+                if (newPrice >= this.settings.minPrice && newPrice <= this.settings.maxPrice) {
+                    result.newPrice = newPrice;
+                    result.change = newPrice - result.beer.currentPrice;
+                    imbalance += adjustment;
                     adjusted = true;
                 }
             }
-            // If no beer could be adjusted, break to avoid infinite loop
             if (!adjusted)
                 break;
         }
-        // 8. Push all other beer updates
-        for (const result of otherBeerResults) {
-            updates.push({ id: result.beer.id, price: result.newPrice });
-            beerChanges[result.beer.category][result.beer.name] = result.change;
-            sectorChanges[result.beer.category] += result.change;
+    }
+    finalizeOtherBeerUpdates(ctx, results) {
+        for (const result of results) {
+            ctx.updates.push({ id: result.beer.id, price: result.newPrice });
+            ctx.beerChanges[result.beer.category][result.beer.name] = result.change;
+            ctx.sectorChanges[result.beer.category] += result.change;
         }
-        return {
-            updates,
-            impact: {
-                purchasedBeerName: purchasedBeer.name,
-                quantity,
-                sectorChanges,
-                beerChanges,
-            },
-        };
     }
     /**
      * Calculate effective volatility based on price ratio

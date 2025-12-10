@@ -7,7 +7,7 @@ export function ThemeToggle({ theme, onToggle }: ThemeToggleProps) {
   return (
     <button
       onClick={onToggle}
-      className="relative w-14 h-8 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#e94560]/50"
+      className="relative w-14 h-8 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-accent/50"
       style={{ background: 'var(--bg-tertiary)' }}
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >

@@ -1,17 +1,17 @@
 import { Router } from 'express';
 import { adminRepository } from '../repositories';
-import { superadminMiddleware, authMiddleware, AuthRequest, isAdminOrAbove } from '../middleware/auth';
+import { superadminMiddleware, authMiddleware, isAdminOrAbove } from '../middleware/auth';
 
 const router = Router();
 
 // GET /api/admins - List all admins (superadmin only)
-router.get('/', superadminMiddleware as any, (_req, res) => {
+router.get('/', superadminMiddleware, (_req, res) => {
   const admins = adminRepository.getAll();
   res.json(admins);
 });
 
 // POST /api/admins - Add a new admin (superadmin only)
-router.post('/', superadminMiddleware as any, (req, res) => {
+router.post('/', superadminMiddleware, (req, res) => {
   const { email, name } = req.body;
 
   if (!email || !name) {
@@ -27,13 +27,12 @@ router.post('/', superadminMiddleware as any, (req, res) => {
     return;
   }
 
-  const authReq = req as AuthRequest;
-  const admin = adminRepository.add(normalizedEmail, name, authReq.user!.email);
+  const admin = adminRepository.add(normalizedEmail, name, req.user!.email);
   res.status(201).json(admin);
 });
 
 // DELETE /api/admins/:id - Remove an admin (superadmin only, or admin removing themselves)
-router.delete('/:id', authMiddleware as any, (req, res) => {
+router.delete('/:id', authMiddleware, (req, res) => {
   const id = parseInt(req.params.id, 10);
 
   if (isNaN(id)) {
@@ -50,11 +49,9 @@ router.delete('/:id', authMiddleware as any, (req, res) => {
     return;
   }
 
-  const authReq = req as AuthRequest;
-
   // Check permissions: superadmin can remove anyone, admin can only remove themselves
-  const isSuperadmin = authReq.user!.role === 'superadmin';
-  const isSelfRemoval = adminToRemove.email === authReq.user!.email.toLowerCase();
+  const isSuperadmin = req.user!.role === 'superadmin';
+  const isSelfRemoval = adminToRemove.email === req.user!.email.toLowerCase();
 
   if (!isSuperadmin && !isSelfRemoval) {
     res.status(403).json({ error: 'Only superadmin can remove other admins' });
@@ -62,7 +59,7 @@ router.delete('/:id', authMiddleware as any, (req, res) => {
   }
 
   // Only admins can remove themselves (not guests trying to remove someone)
-  if (isSelfRemoval && !isAdminOrAbove(authReq.user!.role)) {
+  if (isSelfRemoval && !isAdminOrAbove(req.user!.role!)) {
     res.status(403).json({ error: 'Insufficient permissions' });
     return;
   }

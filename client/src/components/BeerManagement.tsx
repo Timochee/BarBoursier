@@ -5,6 +5,7 @@ import { api, CreateBeerRequest, UpdateBeerRequest } from '../services/api';
 import { BeerForm, type BeerFormData } from './BeerForm';
 import { BeerListItem } from './BeerListItem';
 import { CATEGORY_STYLES, getCategoryBadgeStyle } from '../utils/styles';
+import { getErrorMessage } from '../utils/helpers';
 
 // Fetch existing categories from the database
 function useCategories() {
@@ -126,7 +127,7 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
         refetchCategories();
       }
     } catch (error) {
-      onError(error instanceof Error ? error.message : editingBeer ? 'Failed to update beer' : 'Failed to add beer');
+      onError(getErrorMessage(error, editingBeer ? 'Failed to update beer' : 'Failed to add beer'));
     } finally {
       setIsSubmitting(false);
     }
@@ -145,7 +146,7 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
       setDeleteConfirm(null);
       refetchCategories();
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to delete beer');
+      onError(getErrorMessage(error, 'Failed to delete beer'));
     } finally {
       setIsSubmitting(false);
     }
@@ -164,7 +165,7 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
       setDeleteCategoryConfirm(null);
       refetchCategories();
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Failed to delete category');
+      onError(getErrorMessage(error, 'Failed to delete category'));
     } finally {
       setIsSubmitting(false);
     }
@@ -232,7 +233,7 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
             }}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
               activeTab === 'manage'
-                ? 'text-[#e94560] border-b-2 border-[#e94560]'
+                ? 'text-accent border-b-2 border-accent'
                 : 'hover:bg-white/5'
             }`}
             style={{ color: activeTab === 'manage' ? undefined : 'var(--text-secondary)' }}
@@ -246,7 +247,7 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
             }}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
               activeTab === 'add'
-                ? 'text-[#e94560] border-b-2 border-[#e94560]'
+                ? 'text-accent border-b-2 border-accent'
                 : 'hover:bg-white/5'
             }`}
             style={{ color: activeTab === 'add' ? undefined : 'var(--text-secondary)' }}
@@ -261,7 +262,7 @@ export function BeerManagement({ beers, onClose, onSuccess, onError }: BeerManag
             }}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
               activeTab === 'categories'
-                ? 'text-[#e94560] border-b-2 border-[#e94560]'
+                ? 'text-accent border-b-2 border-accent'
                 : 'hover:bg-white/5'
             }`}
             style={{ color: activeTab === 'categories' ? undefined : 'var(--text-secondary)' }}

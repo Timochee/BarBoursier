@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Preset } from 'shared';
 import { Modal, ModalHeader, ModalFooter } from './Modal';
 import { ConfirmDialog } from './ConfirmDialog';
+import { formatDate, getErrorMessage } from '../utils/helpers';
 
 interface PresetManagementProps {
   presets: Preset[];
@@ -45,7 +46,7 @@ export function PresetManagement({
       setName('');
       setDescription('');
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to save preset');
+      onError(getErrorMessage(err, 'Failed to save preset'));
     }
     setIsSubmitting(false);
   };
@@ -58,7 +59,7 @@ export function PresetManagement({
       await onLoad(presetToLoad.id);
       onSuccess(`Preset "${presetToLoad.name}" loaded successfully`);
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to load preset');
+      onError(getErrorMessage(err, 'Failed to load preset'));
     }
     setIsSubmitting(false);
     setPresetToLoad(null);
@@ -72,18 +73,10 @@ export function PresetManagement({
       await onDelete(presetToDelete.id);
       onSuccess(`Preset "${presetToDelete.name}" deleted`);
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to delete preset');
+      onError(getErrorMessage(err, 'Failed to delete preset'));
     }
     setIsSubmitting(false);
     setPresetToDelete(null);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
   };
 
   return (

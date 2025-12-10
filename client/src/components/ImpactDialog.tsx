@@ -9,7 +9,7 @@ interface ImpactDialogProps {
 }
 
 const ImpactIcon = (
-  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#e94560] to-[#ff6b6b] flex items-center justify-center">
+  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-accent-light flex items-center justify-center">
     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
     </svg>
@@ -41,7 +41,7 @@ export function ImpactDialog({ impact, onClose }: ImpactDialogProps) {
         >
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>You bought</p>
           <p className="text-2xl font-bold mt-1">
-            <span className="text-[#e94560]">{impact.quantity}x</span>{' '}
+            <span className="text-accent">{impact.quantity}x</span>{' '}
             {impact.purchasedBeerName}
           </p>
         </div>

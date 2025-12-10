@@ -43,7 +43,15 @@ const io = new socket_io_1.Server(httpServer, {
 (0, socket_1.setSocketIO)(io);
 // Security middleware
 app.use((0, helmet_1.default)({
-    contentSecurityPolicy: isProduction ? undefined : false, // Disable CSP in dev for hot reload
+    contentSecurityPolicy: isProduction ? {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "https://lh3.googleusercontent.com"],
+            connectSrc: ["'self'", "wss:", "ws:"],
+        },
+    } : false, // Disable CSP in dev for hot reload
 }));
 // Rate limiting - 100 requests per minute per IP
 const limiter = (0, express_rate_limit_1.default)({

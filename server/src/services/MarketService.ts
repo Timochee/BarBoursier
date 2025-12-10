@@ -1,6 +1,7 @@
 import type { Beer, PurchaseResult, MarketStats } from 'shared';
 import { beerRepository, transactionRepository, priceHistoryRepository, settingsRepository } from '../repositories';
 import { PricingService } from './PricingService';
+import { beersToRecords } from '../utils/helpers';
 
 export class MarketService {
   private pricingService: PricingService | null = null;
@@ -53,8 +54,7 @@ export class MarketService {
 
     // Record initial prices
     const beers = beerRepository.getAll();
-    const priceRecords = beers.map(b => ({ beerId: b.id, price: b.currentPrice }));
-    priceHistoryRepository.recordPrices(priceRecords);
+    priceHistoryRepository.recordPrices(beersToRecords(beers));
 
     return beers;
   }

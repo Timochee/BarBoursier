@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useTheme, useMarket, useToast, useAdminMode, useAdmins, usePresets } from './hooks';
+import { useTheme, useMarket, useToast, useAdminMode, useAdmins, usePresets, useModals } from './hooks';
 import {
   Header,
   BeerTable,
@@ -25,6 +25,7 @@ function AppContent() {
   const { isAdmin, isSuperadmin, isLoggedIn, isLoading: isAuthLoading, authError, user, login, logout, clearAuthError } = useAdminMode();
   const { admins, isLoading: isAdminsLoading, addAdmin, removeAdmin, error: adminsError, clearError: clearAdminsError } = useAdmins(isSuperadmin);
   const { presets, isLoading: isPresetsLoading, saveCurrent: saveCurrentPreset, loadPreset, deletePreset } = usePresets();
+  const modals = useModals();
 
   // Show admins error if present
   useEffect(() => {
@@ -60,13 +61,6 @@ function AppContent() {
     onError: handleError,
   });
 
-  const [showHistory, setShowHistory] = useState(false);
-  const [showImpact, setShowImpact] = useState(false);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [showBeerManagement, setShowBeerManagement] = useState(false);
-  const [showAdminManagement, setShowAdminManagement] = useState(false);
-  const [showPresetManagement, setShowPresetManagement] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [showImpactOnBuy, setShowImpactOnBuy] = useState(() => {
     return localStorage.getItem('showImpactOnBuy') !== 'false';
@@ -93,27 +87,27 @@ function AppContent() {
   const handleBuy = (beerId: number, quantity: number) => {
     buy(beerId, quantity);
     if (showImpactOnBuy) {
-      setShowImpact(true);
+      modals.open('impact');
     }
   };
 
   const handleReset = () => {
-    setShowResetConfirm(true);
+    modals.open('resetConfirm');
   };
 
   const confirmReset = () => {
     reset();
-    setShowResetConfirm(false);
+    modals.close();
     success('Market has been reset');
   };
 
   const handleLogout = () => {
-    setShowLogoutConfirm(true);
+    modals.open('logoutConfirm');
   };
 
   const confirmLogout = () => {
     logout();
-    setShowLogoutConfirm(false);
+    modals.close();
     success('Logged out successfully');
   };
 
@@ -135,10 +129,10 @@ function AppContent() {
         onLogout={handleLogout}
         theme={theme}
         onToggleTheme={toggleTheme}
-        onShowBeerManagement={() => setShowBeerManagement(true)}
-        onShowHistory={() => setShowHistory(true)}
-        onShowPresets={() => setShowPresetManagement(true)}
-        onShowAdminManagement={() => setShowAdminManagement(true)}
+        onShowBeerManagement={() => modals.open('beerManagement')}
+        onShowHistory={() => modals.open('history')}
+        onShowPresets={() => modals.open('presetManagement')}
+        onShowAdminManagement={() => modals.open('adminManagement')}
         onReset={handleReset}
         keepQuantity={keepQuantity}
         showImpactOnBuy={showImpactOnBuy}
@@ -274,21 +268,21 @@ function AppContent() {
       </footer>
 
       {/* Modals */}
-      {showHistory && (
-        <TransactionHistory onClose={() => setShowHistory(false)} />
+      {modals.showHistory && (
+        <TransactionHistory onClose={modals.close} />
       )}
 
-      {showImpact && lastPurchase && (
+      {modals.showImpact && lastPurchase && (
         <ImpactDialog
           impact={lastPurchase.impact}
           onClose={() => {
-            setShowImpact(false);
+            modals.close();
             clearLastPurchase();
           }}
         />
       )}
 
-      {showResetConfirm && (
+      {modals.showResetConfirm && (
         <ConfirmDialog
           title="Reset Market"
           message="Are you sure you want to reset the market? All prices will return to their base values and transaction history will be cleared."
@@ -296,11 +290,11 @@ function AppContent() {
           cancelLabel="Cancel"
           variant="danger"
           onConfirm={confirmReset}
-          onCancel={() => setShowResetConfirm(false)}
+          onCancel={modals.close}
         />
       )}
 
-      {showLogoutConfirm && (
+      {modals.showLogoutConfirm && (
         <ConfirmDialog
           title="Logout"
           message="Are you sure you want to logout?"
@@ -308,54 +302,42 @@ function AppContent() {
           cancelLabel="Cancel"
           variant="warning"
           onConfirm={confirmLogout}
-          onCancel={() => setShowLogoutConfirm(false)}
+          onCancel={modals.close}
         />
       )}
 
-      {showBeerManagement && (
+      {modals.showBeerManagement && (
         <BeerManagement
           beers={beers}
-          onClose={() => setShowBeerManagement(false)}
-          onSuccess={(msg) => {
-            success(msg);
-          }}
-          onError={(msg) => {
-            error(msg);
-          }}
+          onClose={modals.close}
+          onSuccess={success}
+          onError={error}
         />
       )}
 
-      {showAdminManagement && user && (
+      {modals.showAdminManagement && user && (
         <AdminManagement
           admins={admins}
           isLoading={isAdminsLoading}
           currentUserEmail={user.email}
-          onClose={() => setShowAdminManagement(false)}
+          onClose={modals.close}
           onAdd={addAdmin}
           onRemove={removeAdmin}
-          onSuccess={(msg) => {
-            success(msg);
-          }}
-          onError={(msg) => {
-            error(msg);
-          }}
+          onSuccess={success}
+          onError={error}
         />
       )}
 
-      {showPresetManagement && (
+      {modals.showPresetManagement && (
         <PresetManagement
           presets={presets}
           isLoading={isPresetsLoading}
-          onClose={() => setShowPresetManagement(false)}
+          onClose={modals.close}
           onSaveCurrent={saveCurrentPreset}
           onLoad={loadPreset}
           onDelete={deletePreset}
-          onSuccess={(msg) => {
-            success(msg);
-          }}
-          onError={(msg) => {
-            error(msg);
-          }}
+          onSuccess={success}
+          onError={error}
         />
       )}
 

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { presetRepository, beerRepository, transactionRepository, priceHistoryRepository } from '../repositories';
-import { superadminMiddleware, AuthRequest } from '../middleware/auth';
+import { presetRepository, beerRepository } from '../repositories';
+import { superadminMiddleware } from '../middleware/auth';
 import { getSocketIO } from '../socket';
 import type { BeerDefinition } from 'shared';
 import { db } from '../db/connection';
@@ -8,13 +8,13 @@ import { db } from '../db/connection';
 const router = Router();
 
 // GET /api/presets - Get all presets (Superadmin only)
-router.get('/', superadminMiddleware as any, (_req: Request, res: Response) => {
+router.get('/', superadminMiddleware, (_req: Request, res: Response) => {
   const presets = presetRepository.getAll();
   res.json(presets);
 });
 
 // GET /api/presets/:id - Get single preset (Admin only)
-router.get('/:id', superadminMiddleware as any, (req: Request, res: Response) => {
+router.get('/:id', superadminMiddleware, (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   const preset = presetRepository.getById(id);
 
@@ -27,8 +27,7 @@ router.get('/:id', superadminMiddleware as any, (req: Request, res: Response) =>
 });
 
 // POST /api/presets - Create new preset (Admin only)
-router.post('/', superadminMiddleware as any, (req: Request, res: Response) => {
-  const authReq = req as AuthRequest;
+router.post('/', superadminMiddleware, (req: Request, res: Response) => {
   const { name, description, beers } = req.body as {
     name: string;
     description?: string;
@@ -49,15 +48,14 @@ router.post('/', superadminMiddleware as any, (req: Request, res: Response) => {
     name,
     description,
     beers,
-    createdBy: authReq.user!.email,
+    createdBy: req.user!.email,
   });
 
   res.status(201).json(preset);
 });
 
 // POST /api/presets/save-current - Save current beers as preset (Admin only)
-router.post('/save-current', superadminMiddleware as any, (req: Request, res: Response) => {
-  const authReq = req as AuthRequest;
+router.post('/save-current', superadminMiddleware, (req: Request, res: Response) => {
   const { name, description } = req.body as { name: string; description?: string };
 
   if (!name) {
@@ -70,12 +68,12 @@ router.post('/save-current', superadminMiddleware as any, (req: Request, res: Re
     return;
   }
 
-  const preset = presetRepository.saveCurrentAsPreset(name, description, authReq.user!.email);
+  const preset = presetRepository.saveCurrentAsPreset(name, description, req.user!.email);
   res.status(201).json(preset);
 });
 
 // POST /api/presets/:id/load - Load a preset (replaces all beers) (Admin only)
-router.post('/:id/load', superadminMiddleware as any, (req: Request, res: Response) => {
+router.post('/:id/load', superadminMiddleware, (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   const preset = presetRepository.getById(id);
 
@@ -127,7 +125,7 @@ router.post('/:id/load', superadminMiddleware as any, (req: Request, res: Respon
 });
 
 // PUT /api/presets/:id - Update preset (Admin only)
-router.put('/:id', superadminMiddleware as any, (req: Request, res: Response) => {
+router.put('/:id', superadminMiddleware, (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   const { name, description, beers } = req.body as {
     name?: string;
@@ -151,7 +149,7 @@ router.put('/:id', superadminMiddleware as any, (req: Request, res: Response) =>
 });
 
 // DELETE /api/presets/:id - Delete preset (Admin only)
-router.delete('/:id', superadminMiddleware as any, (req: Request, res: Response) => {
+router.delete('/:id', superadminMiddleware, (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   const deleted = presetRepository.delete(id);
 

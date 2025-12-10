@@ -1,35 +1,23 @@
 import { db } from '../db/connection';
 import type { Beer } from 'shared';
 
+// SQL constants to avoid repetition (DRY)
+const BEER_COLUMNS = `id, name, base_price as basePrice, current_price as currentPrice, category, volatility`;
+const SELECT_BEER = `SELECT ${BEER_COLUMNS} FROM beers`;
+
 export class BeerRepository {
   getAll(): Beer[] {
-    const stmt = db.prepare(`
-      SELECT id, name, base_price as basePrice, current_price as currentPrice,
-             category, volatility
-      FROM beers
-      ORDER BY category, name
-    `);
+    const stmt = db.prepare(`${SELECT_BEER} ORDER BY category, name`);
     return stmt.all() as Beer[];
   }
 
   getById(id: number): Beer | undefined {
-    const stmt = db.prepare(`
-      SELECT id, name, base_price as basePrice, current_price as currentPrice,
-             category, volatility
-      FROM beers
-      WHERE id = ?
-    `);
+    const stmt = db.prepare(`${SELECT_BEER} WHERE id = ?`);
     return stmt.get(id) as Beer | undefined;
   }
 
   getByCategory(category: string): Beer[] {
-    const stmt = db.prepare(`
-      SELECT id, name, base_price as basePrice, current_price as currentPrice,
-             category, volatility
-      FROM beers
-      WHERE category = ?
-      ORDER BY name
-    `);
+    const stmt = db.prepare(`${SELECT_BEER} WHERE category = ? ORDER BY name`);
     return stmt.all(category) as Beer[];
   }
 

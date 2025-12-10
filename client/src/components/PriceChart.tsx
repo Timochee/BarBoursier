@@ -149,7 +149,7 @@ export function PriceChart({ chartData, beers }: PriceChartProps) {
             onClick={() => setViewMode('sector')}
             className={`px-4 py-2 text-sm font-medium transition-all ${
               viewMode === 'sector'
-                ? 'bg-[#e94560] text-white'
+                ? 'bg-accent text-white'
                 : 'hover:bg-white/10'
             }`}
           >
@@ -159,7 +159,7 @@ export function PriceChart({ chartData, beers }: PriceChartProps) {
             onClick={() => setViewMode('beer')}
             className={`px-4 py-2 text-sm font-medium transition-all ${
               viewMode === 'beer'
-                ? 'bg-[#e94560] text-white'
+                ? 'bg-accent text-white'
                 : 'hover:bg-white/10'
             }`}
           >

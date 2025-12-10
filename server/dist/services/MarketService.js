@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.marketService = exports.MarketService = void 0;
 const repositories_1 = require("../repositories");
 const PricingService_1 = require("./PricingService");
+const helpers_1 = require("../utils/helpers");
 class MarketService {
     constructor() {
         this.pricingService = null;
@@ -44,8 +45,7 @@ class MarketService {
         repositories_1.priceHistoryRepository.deleteAll();
         // Record initial prices
         const beers = repositories_1.beerRepository.getAll();
-        const priceRecords = beers.map(b => ({ beerId: b.id, price: b.currentPrice }));
-        repositories_1.priceHistoryRepository.recordPrices(priceRecords);
+        repositories_1.priceHistoryRepository.recordPrices((0, helpers_1.beersToRecords)(beers));
         return beers;
     }
     getStats() {

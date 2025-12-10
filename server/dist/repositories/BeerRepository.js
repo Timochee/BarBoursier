@@ -2,33 +2,20 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.beerRepository = exports.BeerRepository = void 0;
 const connection_1 = require("../db/connection");
+// SQL constants to avoid repetition (DRY)
+const BEER_COLUMNS = `id, name, base_price as basePrice, current_price as currentPrice, category, volatility`;
+const SELECT_BEER = `SELECT ${BEER_COLUMNS} FROM beers`;
 class BeerRepository {
     getAll() {
-        const stmt = connection_1.db.prepare(`
-      SELECT id, name, base_price as basePrice, current_price as currentPrice,
-             category, volatility
-      FROM beers
-      ORDER BY category, name
-    `);
+        const stmt = connection_1.db.prepare(`${SELECT_BEER} ORDER BY category, name`);
         return stmt.all();
     }
     getById(id) {
-        const stmt = connection_1.db.prepare(`
-      SELECT id, name, base_price as basePrice, current_price as currentPrice,
-             category, volatility
-      FROM beers
-      WHERE id = ?
-    `);
+        const stmt = connection_1.db.prepare(`${SELECT_BEER} WHERE id = ?`);
         return stmt.get(id);
     }
     getByCategory(category) {
-        const stmt = connection_1.db.prepare(`
-      SELECT id, name, base_price as basePrice, current_price as currentPrice,
-             category, volatility
-      FROM beers
-      WHERE category = ?
-      ORDER BY name
-    `);
+        const stmt = connection_1.db.prepare(`${SELECT_BEER} WHERE category = ? ORDER BY name`);
         return stmt.all(category);
     }
     updatePrice(id, newPrice) {

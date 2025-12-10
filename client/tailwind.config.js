@@ -8,6 +8,12 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Root-level accent colors for easy access
+        accent: {
+          DEFAULT: '#e94560',
+          hover: '#d63850',
+          light: '#ff6b6b',
+        },
         dark: {
           bg: '#1f2940',
           header: '#16213e',

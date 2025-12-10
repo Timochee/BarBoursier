@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { DEFAULT_SETTINGS, VALIDATION } from 'shared';
 import { beerRepository, priceHistoryRepository } from '../repositories';
 import { emitBeersUpdated } from '../socket';
 import { superadminMiddleware } from '../middleware/auth';
 import { logger } from '../logger';
+import { roundPrice, beersToRecords, validateBeerCreate, validateBeerUpdate } from '../utils/helpers';
 
 const router = Router();
 
@@ -40,27 +40,13 @@ router.get('/category/:category', (req, res) => {
 });
 
 // POST /api/beers - Create a new beer (Superadmin only)
-router.post('/', superadminMiddleware as any, (req, res) => {
+router.post('/', superadminMiddleware, (req, res) => {
   const { name, basePrice, category, volatility } = req.body;
 
   // Validation
-  if (!name || typeof name !== 'string' || name.trim().length === 0) {
-    res.status(400).json({ error: 'Name is required' });
-    return;
-  }
-
-  if (typeof basePrice !== 'number' || basePrice < DEFAULT_SETTINGS.minPrice || basePrice > DEFAULT_SETTINGS.maxPrice) {
-    res.status(400).json({ error: `Base price must be between ${DEFAULT_SETTINGS.minPrice} and ${DEFAULT_SETTINGS.maxPrice}` });
-    return;
-  }
-
-  if (!category || typeof category !== 'string' || category.trim().length === 0) {
-    res.status(400).json({ error: 'Category is required' });
-    return;
-  }
-
-  if (typeof volatility !== 'number' || volatility < VALIDATION.volatility.min || volatility > VALIDATION.volatility.max) {
-    res.status(400).json({ error: `Volatility must be between ${VALIDATION.volatility.min} and ${VALIDATION.volatility.max}` });
+  const validation = validateBeerCreate({ name, basePrice, category, volatility });
+  if (!validation.valid) {
+    res.status(400).json({ error: validation.error });
     return;
   }
 
@@ -73,16 +59,14 @@ router.post('/', superadminMiddleware as any, (req, res) => {
   try {
     const beer = beerRepository.create({
       name: name.trim(),
-      basePrice: Math.round(basePrice * 100) / 100,
+      basePrice: roundPrice(basePrice),
       category,
-      volatility: Math.round(volatility * 100) / 100,
+      volatility: roundPrice(volatility),
     });
 
     // Record initial price in history so the beer appears correctly on the chart
-    // We record all beers' current prices to keep the history in sync
     const allBeers = beerRepository.getAll();
-    const priceRecords = allBeers.map(b => ({ beerId: b.id, price: b.currentPrice }));
-    priceHistoryRepository.recordPrices(priceRecords);
+    priceHistoryRepository.recordPrices(beersToRecords(allBeers));
 
     // Notify all clients about the new beer
     emitBeersUpdated();
@@ -95,7 +79,7 @@ router.post('/', superadminMiddleware as any, (req, res) => {
 });
 
 // PUT /api/beers/:id - Update a beer (Superadmin only)
-router.put('/:id', superadminMiddleware as any, (req, res) => {
+router.put('/:id', superadminMiddleware, (req, res) => {
   const id = parseInt(req.params.id, 10);
   const { name, basePrice, category, volatility } = req.body;
 
@@ -106,23 +90,9 @@ router.put('/:id', superadminMiddleware as any, (req, res) => {
   }
 
   // Validation
-  if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
-    res.status(400).json({ error: 'Name cannot be empty' });
-    return;
-  }
-
-  if (basePrice !== undefined && (typeof basePrice !== 'number' || basePrice < DEFAULT_SETTINGS.minPrice || basePrice > DEFAULT_SETTINGS.maxPrice)) {
-    res.status(400).json({ error: `Base price must be between ${DEFAULT_SETTINGS.minPrice} and ${DEFAULT_SETTINGS.maxPrice}` });
-    return;
-  }
-
-  if (category !== undefined && (typeof category !== 'string' || category.trim().length === 0)) {
-    res.status(400).json({ error: 'Category cannot be empty' });
-    return;
-  }
-
-  if (volatility !== undefined && (typeof volatility !== 'number' || volatility < VALIDATION.volatility.min || volatility > VALIDATION.volatility.max)) {
-    res.status(400).json({ error: `Volatility must be between ${VALIDATION.volatility.min} and ${VALIDATION.volatility.max}` });
+  const validation = validateBeerUpdate({ name, basePrice, category, volatility });
+  if (!validation.valid) {
+    res.status(400).json({ error: validation.error });
     return;
   }
 
@@ -135,9 +105,9 @@ router.put('/:id', superadminMiddleware as any, (req, res) => {
   try {
     const beer = beerRepository.update(id, {
       name: name?.trim(),
-      basePrice: basePrice ? Math.round(basePrice * 100) / 100 : undefined,
+      basePrice: basePrice !== undefined ? roundPrice(basePrice) : undefined,
       category,
-      volatility: volatility ? Math.round(volatility * 100) / 100 : undefined,
+      volatility: volatility !== undefined ? roundPrice(volatility) : undefined,
     });
 
     // Notify all clients about the updated beer
@@ -151,7 +121,7 @@ router.put('/:id', superadminMiddleware as any, (req, res) => {
 });
 
 // DELETE /api/beers/:id - Delete a beer (Superadmin only)
-router.delete('/:id', superadminMiddleware as any, (req, res) => {
+router.delete('/:id', superadminMiddleware, (req, res) => {
   const id = parseInt(req.params.id, 10);
 
   const existing = beerRepository.getById(id);
@@ -177,7 +147,7 @@ router.delete('/:id', superadminMiddleware as any, (req, res) => {
 });
 
 // DELETE /api/beers/category/:category - Delete all beers in a category (Superadmin only)
-router.delete('/category/:category', superadminMiddleware as any, (req, res) => {
+router.delete('/category/:category', superadminMiddleware, (req, res) => {
   const { category } = req.params;
 
   const beersInCategory = beerRepository.getByCategory(category);

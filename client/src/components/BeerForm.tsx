@@ -102,7 +102,7 @@ export function BeerForm({
               onClick={() => handleCategoryChange(cat)}
               className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all ${
                 formData.category === cat && !showCustomCategory
-                  ? 'ring-2 ring-[#e94560]'
+                  ? 'ring-2 ring-accent'
                   : 'opacity-60 hover:opacity-100'
               }`}
               style={{ background: 'var(--bg-tertiary)' }}
@@ -117,7 +117,7 @@ export function BeerForm({
             onClick={handleCustomCategoryToggle}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               showCustomCategory
-                ? 'ring-2 ring-[#e94560]'
+                ? 'ring-2 ring-accent'
                 : 'opacity-60 hover:opacity-100'
             }`}
             style={{ background: 'var(--bg-tertiary)' }}

@@ -27,7 +27,7 @@ export function TransactionHistory({ onClose }: TransactionHistoryProps) {
         <div className="overflow-auto max-h-[60vh]">
           {isLoading ? (
             <div className="p-12 text-center">
-              <div className="animate-spin w-8 h-8 border-2 border-[#e94560] border-t-transparent rounded-full mx-auto mb-4" />
+              <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-4" />
               <p style={{ color: 'var(--text-secondary)' }}>Loading transactions...</p>
             </div>
           ) : transactions?.length === 0 ? (
@@ -79,7 +79,7 @@ export function TransactionHistory({ onClose }: TransactionHistoryProps) {
                     <td className="p-4 text-right tabular-nums" style={{ color: 'var(--text-secondary)' }}>
                       {tx.unitPrice.toFixed(2)} EUR
                     </td>
-                    <td className="p-4 text-right tabular-nums font-bold text-[#e94560]">
+                    <td className="p-4 text-right tabular-nums font-bold text-accent">
                       {tx.totalPrice.toFixed(2)} EUR
                     </td>
                     <td className="p-4 text-right text-sm tabular-nums" style={{ color: 'var(--text-secondary)' }}>
@@ -96,7 +96,7 @@ export function TransactionHistory({ onClose }: TransactionHistoryProps) {
         <div className="flex items-center justify-between">
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Total spent:{' '}
-            <span className="font-bold text-[#e94560]">
+            <span className="font-bold text-accent">
               {transactions?.reduce((sum, tx) => sum + tx.totalPrice, 0).toFixed(2) || '0.00'} EUR
             </span>
           </p>

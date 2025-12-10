@@ -305,3 +305,36 @@ Sector Matrix (row buys → column decreases):
 - `beersUpdated` - Beer list changed (add/edit/delete)
 - `purchaseResult` - Purchase result with impact data
 - `marketReset` - Market was reset
+
+## Development Best Practices
+
+### Code Principles
+| Principle | Description |
+|-----------|-------------|
+| **KISS** | Keep It Simple, Stupid |
+| **DRY** | Don't Repeat Yourself |
+| **SLC** | Simple, Lovable, Complete |
+| **1 class 1 purpose** | Each class has a single responsibility |
+
+### SOLID Principles
+- **S**ingle Responsibility: A class should have only one reason to change
+- **O**pen-Closed: Open for extension, closed for modification
+- **L**iskov Substitution: Subclasses must be substitutable for their base classes
+- **I**nterface Segregation: Break large interfaces into smaller, specific ones
+- **D**ependency Inversion: Depend on abstractions, not concretions
+
+### Docker Best Practices
+| Acronym | Meaning | Description |
+|---------|---------|-------------|
+| **SLIM** | Small, Lean, Independent, Minimal | Use minimal base images (Alpine), install only runtime dependencies |
+| **DRI** | Don't Run as root | Always use `USER app` |
+| **BLoC** | Build Once, Launch Constantly | Same artifact for all environments |
+| **CLEAN** | Clean Layers | Group commands, remove caches in same layer |
+| **IMMUTABLE** | Immutable Containers | No runtime changes, rebuild for any change |
+| **CONFIG OUT** | Configuration Outside | Never bake secrets into images |
+| **1C1P** | One Container, One Process | Easier to monitor, scale, maintain |
+| **CACHED** | Cache-Friendly Builds | Order Dockerfile for layer caching |
+| **HEALTH** | Health Checks | Add healthcheck endpoints |
+| **TAG SMART** | Meaningful Tags | Never use "latest", use semantic versions |
+| **LOG TO STDOUT** | Standard Output | Log to stdout/stderr, not files |
+| **SECURE BY DEFAULT** | Security First | Drop capabilities, scan images, update deps |

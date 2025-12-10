@@ -1,6 +1,10 @@
 import { db } from '../db/connection';
 import type { Preset, BeerDefinition } from 'shared';
 
+// SQL constants to avoid repetition (DRY)
+const PRESET_COLUMNS = `id, name, description, beers, created_at, created_by`;
+const SELECT_PRESET = `SELECT ${PRESET_COLUMNS} FROM presets`;
+
 interface PresetRow {
   id: number;
   name: string;
@@ -12,32 +16,30 @@ interface PresetRow {
 
 export class PresetRepository {
   private rowToPreset(row: PresetRow): Preset {
+    let beers: BeerDefinition[];
+    try {
+      beers = JSON.parse(row.beers) as BeerDefinition[];
+    } catch {
+      beers = [];
+    }
     return {
       id: row.id,
       name: row.name,
       description: row.description || undefined,
-      beers: JSON.parse(row.beers) as BeerDefinition[],
+      beers,
       createdAt: row.created_at,
       createdBy: row.created_by,
     };
   }
 
   getAll(): Preset[] {
-    const stmt = db.prepare(`
-      SELECT id, name, description, beers, created_at, created_by
-      FROM presets
-      ORDER BY name
-    `);
+    const stmt = db.prepare(`${SELECT_PRESET} ORDER BY name`);
     const rows = stmt.all() as PresetRow[];
     return rows.map(row => this.rowToPreset(row));
   }
 
   getById(id: number): Preset | undefined {
-    const stmt = db.prepare(`
-      SELECT id, name, description, beers, created_at, created_by
-      FROM presets
-      WHERE id = ?
-    `);
+    const stmt = db.prepare(`${SELECT_PRESET} WHERE id = ?`);
     const row = stmt.get(id) as PresetRow | undefined;
     return row ? this.rowToPreset(row) : undefined;
   }

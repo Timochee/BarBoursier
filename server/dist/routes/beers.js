@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const shared_1 = require("shared");
 const repositories_1 = require("../repositories");
 const socket_1 = require("../socket");
 const auth_1 = require("../middleware/auth");
 const logger_1 = require("../logger");
+const helpers_1 = require("../utils/helpers");
 const router = (0, express_1.Router)();
 // GET /api/beers - Get all beers
 router.get('/', (req, res) => {
@@ -37,20 +37,9 @@ router.get('/category/:category', (req, res) => {
 router.post('/', auth_1.superadminMiddleware, (req, res) => {
     const { name, basePrice, category, volatility } = req.body;
     // Validation
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-        res.status(400).json({ error: 'Name is required' });
-        return;
-    }
-    if (typeof basePrice !== 'number' || basePrice < shared_1.DEFAULT_SETTINGS.minPrice || basePrice > shared_1.DEFAULT_SETTINGS.maxPrice) {
-        res.status(400).json({ error: `Base price must be between ${shared_1.DEFAULT_SETTINGS.minPrice} and ${shared_1.DEFAULT_SETTINGS.maxPrice}` });
-        return;
-    }
-    if (!category || typeof category !== 'string' || category.trim().length === 0) {
-        res.status(400).json({ error: 'Category is required' });
-        return;
-    }
-    if (typeof volatility !== 'number' || volatility < shared_1.VALIDATION.volatility.min || volatility > shared_1.VALIDATION.volatility.max) {
-        res.status(400).json({ error: `Volatility must be between ${shared_1.VALIDATION.volatility.min} and ${shared_1.VALIDATION.volatility.max}` });
+    const validation = (0, helpers_1.validateBeerCreate)({ name, basePrice, category, volatility });
+    if (!validation.valid) {
+        res.status(400).json({ error: validation.error });
         return;
     }
     // Check for duplicate name
@@ -61,10 +50,13 @@ router.post('/', auth_1.superadminMiddleware, (req, res) => {
     try {
         const beer = repositories_1.beerRepository.create({
             name: name.trim(),
-            basePrice: Math.round(basePrice * 100) / 100,
+            basePrice: (0, helpers_1.roundPrice)(basePrice),
             category,
-            volatility: Math.round(volatility * 100) / 100,
+            volatility: (0, helpers_1.roundPrice)(volatility),
         });
+        // Record initial price in history so the beer appears correctly on the chart
+        const allBeers = repositories_1.beerRepository.getAll();
+        repositories_1.priceHistoryRepository.recordPrices((0, helpers_1.beersToRecords)(allBeers));
         // Notify all clients about the new beer
         (0, socket_1.emitBeersUpdated)();
         res.status(201).json(beer);
@@ -84,20 +76,9 @@ router.put('/:id', auth_1.superadminMiddleware, (req, res) => {
         return;
     }
     // Validation
-    if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
-        res.status(400).json({ error: 'Name cannot be empty' });
-        return;
-    }
-    if (basePrice !== undefined && (typeof basePrice !== 'number' || basePrice < shared_1.DEFAULT_SETTINGS.minPrice || basePrice > shared_1.DEFAULT_SETTINGS.maxPrice)) {
-        res.status(400).json({ error: `Base price must be between ${shared_1.DEFAULT_SETTINGS.minPrice} and ${shared_1.DEFAULT_SETTINGS.maxPrice}` });
-        return;
-    }
-    if (category !== undefined && (typeof category !== 'string' || category.trim().length === 0)) {
-        res.status(400).json({ error: 'Category cannot be empty' });
-        return;
-    }
-    if (volatility !== undefined && (typeof volatility !== 'number' || volatility < shared_1.VALIDATION.volatility.min || volatility > shared_1.VALIDATION.volatility.max)) {
-        res.status(400).json({ error: `Volatility must be between ${shared_1.VALIDATION.volatility.min} and ${shared_1.VALIDATION.volatility.max}` });
+    const validation = (0, helpers_1.validateBeerUpdate)({ name, basePrice, category, volatility });
+    if (!validation.valid) {
+        res.status(400).json({ error: validation.error });
         return;
     }
     // Check for duplicate name (excluding current beer)
@@ -108,9 +89,9 @@ router.put('/:id', auth_1.superadminMiddleware, (req, res) => {
     try {
         const beer = repositories_1.beerRepository.update(id, {
             name: name?.trim(),
-            basePrice: basePrice ? Math.round(basePrice * 100) / 100 : undefined,
+            basePrice: basePrice !== undefined ? (0, helpers_1.roundPrice)(basePrice) : undefined,
             category,
-            volatility: volatility ? Math.round(volatility * 100) / 100 : undefined,
+            volatility: volatility !== undefined ? (0, helpers_1.roundPrice)(volatility) : undefined,
         });
         // Notify all clients about the updated beer
         (0, socket_1.emitBeersUpdated)();

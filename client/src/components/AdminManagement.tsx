@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Admin } from 'shared';
 import { Modal, ModalHeader, ModalFooter } from './Modal';
 import { ConfirmDialog } from './ConfirmDialog';
+import { formatDate } from '../utils/helpers';
 
 interface AdminManagementProps {
   admins: Admin[];
@@ -59,14 +60,6 @@ export function AdminManagement({
       onSuccess(`${adminToRemove.name} has been removed as admin`);
     }
     setAdminToRemove(null);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
   };
 
   return (

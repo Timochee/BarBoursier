@@ -85,14 +85,14 @@ export function Header({
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#e94560] to-[#ff6b6b] flex items-center justify-center shadow-lg shadow-[#e94560]/30">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-accent to-accent-light flex items-center justify-center shadow-lg shadow-accent/30">
               <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
             </div>
             <div>
               <h1 className="text-lg sm:text-xl font-bold tracking-tight">
-                <span className="text-[#e94560]">Bar</span> Boursier
+                <span className="text-accent">Bar</span> Boursier
               </h1>
             </div>
           </div>

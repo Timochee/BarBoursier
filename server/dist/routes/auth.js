@@ -47,13 +47,12 @@ router.get('/google/callback', (req, res, next) => {
 });
 // GET /api/auth/verify - Verify if token is still valid
 router.get('/verify', auth_1.authMiddleware, (req, res) => {
-    const authReq = req;
     res.json({
         valid: true,
-        isAdmin: (0, auth_1.isAdminOrAbove)(authReq.user.role),
-        isSuperadmin: authReq.user.role === 'superadmin',
-        role: authReq.user.role,
-        user: authReq.user
+        isAdmin: (0, auth_1.isAdminOrAbove)(req.user.role),
+        isSuperadmin: req.user.role === 'superadmin',
+        role: req.user.role,
+        user: req.user
     });
 });
 // POST /api/auth/logout - Logout (client-side token removal, but useful for logging)

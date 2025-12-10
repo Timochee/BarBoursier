@@ -24,9 +24,8 @@ export interface AuthUser {
   role: Role;
 }
 
-export interface AuthRequest extends Request {
-  user?: AuthUser;
-}
+// AuthRequest is now just an alias - Request is globally extended with user?
+export type AuthRequest = Request;
 
 export interface GoogleProfile {
   id: string;
@@ -134,7 +133,7 @@ function extractAndVerifyToken(req: Request): { payload: JWTPayload } | { error:
 }
 
 // Populate request with user info from JWT payload (role is fetched fresh from DB)
-function populateRequestFromPayload(req: AuthRequest, payload: JWTPayload): void {
+function populateRequestFromPayload(req: Request, payload: JWTPayload): void {
   const role = getUserRole(payload.email);
   req.user = {
     email: payload.email,
@@ -145,7 +144,7 @@ function populateRequestFromPayload(req: AuthRequest, payload: JWTPayload): void
 }
 
 // JWT auth middleware - allows any authenticated user
-export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
+export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
   const result = extractAndVerifyToken(req);
 
   if ('error' in result) {
@@ -158,7 +157,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 }
 
 // Admin-only middleware - requires admin or superadmin role
-export function adminMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
+export function adminMiddleware(req: Request, res: Response, next: NextFunction): void {
   const result = extractAndVerifyToken(req);
 
   if ('error' in result) {
@@ -168,7 +167,7 @@ export function adminMiddleware(req: AuthRequest, res: Response, next: NextFunct
 
   populateRequestFromPayload(req, result.payload);
 
-  if (!isAdminOrAbove(req.user!.role)) {
+  if (!isAdminOrAbove(req.user!.role!)) {
     res.status(403).json({ error: 'Insufficient permissions' });
     return;
   }
@@ -177,7 +176,7 @@ export function adminMiddleware(req: AuthRequest, res: Response, next: NextFunct
 }
 
 // Superadmin-only middleware
-export function superadminMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
+export function superadminMiddleware(req: Request, res: Response, next: NextFunction): void {
   const result = extractAndVerifyToken(req);
 
   if ('error' in result) {
