@@ -47,7 +47,15 @@ setSocketIO(io);
 
 // Security middleware
 app.use(helmet({
-    contentSecurityPolicy: isProduction ? undefined : false, // Disable CSP in dev for hot reload
+    contentSecurityPolicy: isProduction ? {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "https://lh3.googleusercontent.com"],
+            connectSrc: ["'self'", "wss:", "ws:"],
+        },
+    } : false, // Disable CSP in dev for hot reload
 }));
 
 // Rate limiting - 100 requests per minute per IP
