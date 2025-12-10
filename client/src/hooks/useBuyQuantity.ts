@@ -7,20 +7,35 @@ interface UseBuyQuantityOptions {
 }
 
 export function useBuyQuantity({ onBuy, keepQuantity = false }: UseBuyQuantityOptions) {
-  const [quantities, setQuantities] = useState<Record<number, number>>({});
+  // Store as strings to allow empty input while typing
+  const [quantities, setQuantities] = useState<Record<number, string>>({});
   const [processingBeer, setProcessingBeer] = useState<number | null>(null);
   const lastBuyTime = useRef<number>(0);
 
-  const getQuantity = useCallback((beerId: number) => {
-    return quantities[beerId] || 1;
+  const getQuantity = useCallback((beerId: number): string => {
+    return quantities[beerId] ?? '1';
+  }, [quantities]);
+
+  const getQuantityNumber = useCallback((beerId: number): number => {
+    const val = quantities[beerId];
+    const num = parseInt(val, 10);
+    return isNaN(num) || num < 1 ? 1 : num;
   }, [quantities]);
 
   const setQuantity = useCallback((beerId: number, value: string) => {
-    const qty = parseInt(value, 10);
-    if (!isNaN(qty) && qty >= 1) {
-      setQuantities(prev => ({ ...prev, [beerId]: qty }));
+    // Allow empty string or valid positive numbers
+    if (value === '' || (/^\d+$/.test(value) && parseInt(value, 10) >= 0)) {
+      setQuantities(prev => ({ ...prev, [beerId]: value }));
     }
   }, []);
+
+  // Reset to 1 if empty when leaving the field
+  const handleBlur = useCallback((beerId: number) => {
+    const val = quantities[beerId];
+    if (val === '' || val === '0') {
+      setQuantities(prev => ({ ...prev, [beerId]: '1' }));
+    }
+  }, [quantities]);
 
   const handleBuy = useCallback((beerId: number) => {
     const now = Date.now();
@@ -34,19 +49,19 @@ export function useBuyQuantity({ onBuy, keepQuantity = false }: UseBuyQuantityOp
     lastBuyTime.current = now;
     setProcessingBeer(beerId);
 
-    const quantity = quantities[beerId] || 1;
+    const quantity = getQuantityNumber(beerId);
     onBuy(beerId, quantity);
 
     // Reset quantity if not keeping
     if (!keepQuantity) {
-      setQuantities(prev => ({ ...prev, [beerId]: 1 }));
+      setQuantities(prev => ({ ...prev, [beerId]: '1' }));
     }
 
     // Clear processing state after cooldown
     setTimeout(() => {
       setProcessingBeer(null);
     }, BUY_COOLDOWN_MS);
-  }, [quantities, processingBeer, onBuy, keepQuantity]);
+  }, [getQuantityNumber, processingBeer, onBuy, keepQuantity]);
 
   const isProcessing = useCallback((beerId: number) => {
     return processingBeer === beerId;
@@ -57,6 +72,7 @@ export function useBuyQuantity({ onBuy, keepQuantity = false }: UseBuyQuantityOp
   return {
     getQuantity,
     setQuantity,
+    handleBlur,
     handleBuy,
     isProcessing,
     isDisabled,

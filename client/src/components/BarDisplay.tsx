@@ -26,7 +26,7 @@ export function BarDisplay({ beers, chartData, isConnected, theme, onExit }: Bar
   const [priceChanges, setPriceChanges] = useState<Map<number, 'up' | 'down'>>(new Map());
   const previousPrices = useRef<Map<number, number>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
+  const [autoScroll, setAutoScroll] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const inactivityTimer = useRef<NodeJS.Timeout | null>(null);
 

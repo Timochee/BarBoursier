@@ -14,8 +14,11 @@ class PricingService {
         // Initialize context
         const ctx = this.initializeContext(beers);
         // Calculate base increase for purchased beer
+        // Using quantity^0.7 for stronger impact than sqrt but not linear
+        // sqrt: qty 4 = 2x, qty 9 = 3x | pow 0.7: qty 4 = 2.6x, qty 9 = 4.7x
         const purchasedEffectiveVol = this.calculateEffectiveVolatility(purchasedBeer);
-        const rawPriceIncrease = this.settings.baseMove * purchasedEffectiveVol * purchasedBeer.currentPrice * Math.sqrt(quantity);
+        const quantityMultiplier = Math.pow(quantity, 0.7);
+        const rawPriceIncrease = this.settings.baseMove * purchasedEffectiveVol * purchasedBeer.currentPrice * quantityMultiplier;
         // Calculate correlated increases for same-sector beers
         const sameSectorBeers = beers.filter(b => b.category === purchasedBeer.category && b.id !== purchasedBeer.id);
         const correlatedIncreases = this.calculateCorrelatedIncreases(sameSectorBeers, rawPriceIncrease, purchasedEffectiveVol);

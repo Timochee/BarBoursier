@@ -29,6 +29,7 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
   const {
     getQuantity,
     setQuantity,
+    handleBlur,
     handleBuy,
     isProcessing,
     isDisabled,
@@ -152,6 +153,7 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
                         min="1"
                         value={getQuantity(beer.id)}
                         onChange={e => setQuantity(beer.id, e.target.value)}
+                        onBlur={() => handleBlur(beer.id)}
                         className="w-16 p-2 text-center text-sm"
                         disabled={isDisabled}
                         aria-label={`Quantity for ${beer.name}`}
