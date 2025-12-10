@@ -62,6 +62,29 @@ body {
   background: var(--text-primary);
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Ticker animation for TV mode */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ticker {
+  animation: ticker 30s linear infinite;
+}
+
+.ticker-container:hover .animate-ticker {
+  animation-play-state: paused;
+}
+
 /* Animations */
 @keyframes pulse-green {
   0%, 100% { background-color: transparent; }

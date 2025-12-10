@@ -13,3 +13,6 @@ export { PresetManagement } from './PresetManagement';
 export { Tooltip } from './Tooltip';
 export { Modal, ModalHeader, ModalFooter, useModalKeyboard } from './Modal';
 export { Header } from './Header';
+export { AdvancedFilters } from './AdvancedFilters';
+export type { FilterState } from './AdvancedFilters';
+export { BarDisplay } from './BarDisplay';

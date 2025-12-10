@@ -9,6 +9,17 @@ export default defineConfig({
         commonjsOptions: {
             include: [/shared/, /node_modules/],
         },
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    // Vendor chunks - split large dependencies
+                    'vendor-react': ['react', 'react-dom'],
+                    'vendor-charts': ['recharts'],
+                    'vendor-query': ['@tanstack/react-query'],
+                    'vendor-socket': ['socket.io-client'],
+                },
+            },
+        },
     },
     server: {
         port: 5173,

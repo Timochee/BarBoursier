@@ -1,26 +1,44 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTheme, useMarket, useToast, useAdminMode, useAdmins, usePresets, useModals } from './hooks';
 import {
   Header,
   BeerTable,
   PriceChart,
-  TransactionHistory,
-  ImpactDialog,
   ToastContainer,
   BeerTableSkeleton,
   ChartSkeleton,
   ConfirmDialog,
-  BeerManagement,
-  AdminManagement,
-  PresetManagement,
+  ImpactDialog,
+  AdvancedFilters,
+  BarDisplay,
 } from './components';
+import type { FilterState } from './components';
 import { CATEGORY_STYLES, getCategoryBadgeStyle } from './utils/styles';
+
+// Lazy load heavy modal components for code-splitting
+const TransactionHistory = lazy(() => import('./components/TransactionHistory').then(m => ({ default: m.TransactionHistory })));
+const BeerManagement = lazy(() => import('./components/BeerManagement').then(m => ({ default: m.BeerManagement })));
+const AdminManagement = lazy(() => import('./components/AdminManagement').then(m => ({ default: m.AdminManagement })));
+const PresetManagement = lazy(() => import('./components/PresetManagement').then(m => ({ default: m.PresetManagement })));
+
+// Modal loading fallback
+const ModalLoader = () => (
+  <div className="modal-overlay flex items-center justify-center">
+    <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full" />
+  </div>
+);
 
 const queryClient = new QueryClient();
 
 function AppContent() {
-  const { theme, toggleTheme } = useTheme();
+  // Check for /tv or /display route to enable bar display mode
+  const [barDisplayMode, setBarDisplayMode] = useState(() => {
+    const path = window.location.pathname;
+    return path === '/tv' || path === '/display';
+  });
+
+  const { theme, preference: themePreference, toggleTheme } = useTheme();
   const { toasts, removeToast, success, error, warning } = useToast();
   const { isAdmin, isSuperadmin, isLoggedIn, isLoading: isAuthLoading, authError, user, login, logout, clearAuthError } = useAdminMode();
   const { admins, isLoading: isAdminsLoading, addAdmin, removeAdmin, error: adminsError, clearError: clearAdminsError } = useAdmins(isSuperadmin);
@@ -69,6 +87,23 @@ function AppContent() {
     return localStorage.getItem('keepQuantity') === 'true';
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [advancedFilters, setAdvancedFilters] = useState<FilterState>({
+    priceMin: null,
+    priceMax: null,
+    volatilityMin: null,
+    volatilityMax: null,
+  });
+
+  const clearAdvancedFilters = () => {
+    setAdvancedFilters({
+      priceMin: null,
+      priceMax: null,
+      volatilityMin: null,
+      volatilityMax: null,
+    });
+  };
+
+  const maxPrice = Math.max(...beers.map(b => b.currentPrice), 25);
 
   const toggleShowImpactOnBuy = () => {
     setShowImpactOnBuy(prev => {
@@ -111,6 +146,30 @@ function AppContent() {
     success('Logged out successfully');
   };
 
+  const exitBarDisplayMode = () => {
+    setBarDisplayMode(false);
+    // Update URL without reload
+    window.history.pushState({}, '', '/');
+  };
+
+  const enterBarDisplayMode = () => {
+    setBarDisplayMode(true);
+    window.history.pushState({}, '', '/tv');
+  };
+
+  // Show bar display mode
+  if (barDisplayMode) {
+    return (
+      <BarDisplay
+        beers={beers}
+        chartData={chartData}
+        isConnected={isConnected}
+        theme={theme}
+        onExit={exitBarDisplayMode}
+      />
+    );
+  }
+
   return (
     <div
       className={`min-h-screen transition-colors duration-300 ${theme}`}
@@ -128,12 +187,14 @@ function AppContent() {
         onLogin={login}
         onLogout={handleLogout}
         theme={theme}
+        themePreference={themePreference}
         onToggleTheme={toggleTheme}
         onShowBeerManagement={() => modals.open('beerManagement')}
         onShowHistory={() => modals.open('history')}
         onShowPresets={() => modals.open('presetManagement')}
         onShowAdminManagement={() => modals.open('adminManagement')}
         onReset={handleReset}
+        onEnterBarDisplay={enterBarDisplayMode}
         keepQuantity={keepQuantity}
         showImpactOnBuy={showImpactOnBuy}
         onToggleKeepQuantity={toggleKeepQuantity}
@@ -191,9 +252,10 @@ function AppContent() {
             </div>
             <div className="hidden sm:flex items-center gap-2" aria-label="Filter by category">
               <button
-                onClick={() => { setCategoryFilter(null); setSearchQuery(''); }}
+                onClick={() => { setCategoryFilter(null); setSearchQuery(''); clearAdvancedFilters(); }}
                 className={`text-xs px-2 py-1 rounded transition-colors ${
-                  categoryFilter || searchQuery ? 'hover:bg-white/10 opacity-100' : 'opacity-0 pointer-events-none'
+                  categoryFilter || searchQuery || advancedFilters.priceMin !== null || advancedFilters.priceMax !== null || advancedFilters.volatilityMin !== null || advancedFilters.volatilityMax !== null
+                    ? 'hover:bg-white/10 opacity-100' : 'opacity-0 pointer-events-none'
                 }`}
                 style={{ color: 'var(--text-secondary)' }}
                 tabIndex={categoryFilter || searchQuery ? 0 : -1}
@@ -220,6 +282,12 @@ function AppContent() {
                   </button>
                 ));
               })()}
+              <AdvancedFilters
+                filters={advancedFilters}
+                onFiltersChange={setAdvancedFilters}
+                maxPrice={maxPrice}
+                onClear={clearAdvancedFilters}
+              />
             </div>
           </div>
           {isLoading ? (
@@ -232,6 +300,7 @@ function AppContent() {
               categoryFilter={categoryFilter}
               searchQuery={searchQuery}
               isAdmin={isAdmin}
+              advancedFilters={advancedFilters}
             />
           )}
         </section>
@@ -268,9 +337,46 @@ function AppContent() {
       </footer>
 
       {/* Modals */}
-      {modals.showHistory && (
-        <TransactionHistory onClose={modals.close} />
-      )}
+      <Suspense fallback={<ModalLoader />}>
+        {modals.showHistory && (
+          <TransactionHistory onClose={modals.close} />
+        )}
+
+        {modals.showBeerManagement && (
+          <BeerManagement
+            beers={beers}
+            onClose={modals.close}
+            onSuccess={success}
+            onError={error}
+          />
+        )}
+
+        {modals.showAdminManagement && user && (
+          <AdminManagement
+            admins={admins}
+            isLoading={isAdminsLoading}
+            currentUserEmail={user.email}
+            onClose={modals.close}
+            onAdd={addAdmin}
+            onRemove={removeAdmin}
+            onSuccess={success}
+            onError={error}
+          />
+        )}
+
+        {modals.showPresetManagement && (
+          <PresetManagement
+            presets={presets}
+            isLoading={isPresetsLoading}
+            onClose={modals.close}
+            onSaveCurrent={saveCurrentPreset}
+            onLoad={loadPreset}
+            onDelete={deletePreset}
+            onSuccess={success}
+            onError={error}
+          />
+        )}
+      </Suspense>
 
       {modals.showImpact && lastPurchase && (
         <ImpactDialog
@@ -303,41 +409,6 @@ function AppContent() {
           variant="warning"
           onConfirm={confirmLogout}
           onCancel={modals.close}
-        />
-      )}
-
-      {modals.showBeerManagement && (
-        <BeerManagement
-          beers={beers}
-          onClose={modals.close}
-          onSuccess={success}
-          onError={error}
-        />
-      )}
-
-      {modals.showAdminManagement && user && (
-        <AdminManagement
-          admins={admins}
-          isLoading={isAdminsLoading}
-          currentUserEmail={user.email}
-          onClose={modals.close}
-          onAdd={addAdmin}
-          onRemove={removeAdmin}
-          onSuccess={success}
-          onError={error}
-        />
-      )}
-
-      {modals.showPresetManagement && (
-        <PresetManagement
-          presets={presets}
-          isLoading={isPresetsLoading}
-          onClose={modals.close}
-          onSaveCurrent={saveCurrentPreset}
-          onLoad={loadPreset}
-          onDelete={deletePreset}
-          onSuccess={success}
-          onError={error}
         />
       )}
 

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { Beer } from 'shared';
 import { getChangePercent } from '../utils/priceChange';
+import type { FilterState } from '../components/AdvancedFilters';
 
 export type SortField = 'category' | 'name' | 'basePrice' | 'currentPrice' | 'change';
 export type SortDirection = 'asc' | 'desc';
@@ -12,7 +13,13 @@ const CATEGORY_ORDER: Record<string, number> = {
   specialty: 3,
 };
 
-export function useBeerSort(beers: Beer[], categoryFilter: string | null, searchQuery: string = '') {
+export interface BeerSortOptions {
+  categoryFilter: string | null;
+  searchQuery?: string;
+  advancedFilters?: FilterState;
+}
+
+export function useBeerSort(beers: Beer[], categoryFilter: string | null, searchQuery: string = '', advancedFilters?: FilterState) {
   const [sortField, setSortField] = useState<SortField>('category');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -42,6 +49,24 @@ export function useBeerSort(beers: Beer[], categoryFilter: string | null, search
       filtered = filtered.filter(beer => beer.category === categoryFilter);
     }
 
+    // Apply advanced filters
+    if (advancedFilters) {
+      const { priceMin, priceMax, volatilityMin, volatilityMax } = advancedFilters;
+
+      if (priceMin !== null) {
+        filtered = filtered.filter(beer => beer.currentPrice >= priceMin);
+      }
+      if (priceMax !== null) {
+        filtered = filtered.filter(beer => beer.currentPrice <= priceMax);
+      }
+      if (volatilityMin !== null) {
+        filtered = filtered.filter(beer => beer.volatility >= volatilityMin);
+      }
+      if (volatilityMax !== null) {
+        filtered = filtered.filter(beer => beer.volatility <= volatilityMax);
+      }
+    }
+
     return [...filtered].sort((a, b) => {
       let comparison = 0;
 
@@ -66,7 +91,7 @@ export function useBeerSort(beers: Beer[], categoryFilter: string | null, search
 
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [beers, sortField, sortDirection, categoryFilter, searchQuery]);
+  }, [beers, sortField, sortDirection, categoryFilter, searchQuery, advancedFilters]);
 
   // Show category badge only for first beer in each consecutive category group
   const showBadgeForBeer = useMemo(() => {

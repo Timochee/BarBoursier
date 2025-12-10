@@ -4,6 +4,7 @@ import { createBeerColorMap, getBeerColor } from '../utils/colors';
 import { CATEGORY_STYLES, getCategoryBadgeStyle } from '../utils/styles';
 import { getChangeClass, PriceArrow } from '../utils/priceChange';
 import { useBeerSort, useBuyQuantity, type SortField } from '../hooks';
+import type { FilterState } from './AdvancedFilters';
 
 interface BeerTableProps {
   beers: Beer[];
@@ -12,9 +13,10 @@ interface BeerTableProps {
   categoryFilter: string | null;
   searchQuery?: string;
   isAdmin?: boolean;
+  advancedFilters?: FilterState;
 }
 
-export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, searchQuery = '', isAdmin = false }: BeerTableProps) {
+export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, searchQuery = '', isAdmin = false, advancedFilters }: BeerTableProps) {
   const {
     sortField,
     sortDirection,
@@ -22,7 +24,7 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
     showBadgeForBeer,
     handleSort,
     getChangePercent,
-  } = useBeerSort(beers, categoryFilter, searchQuery);
+  } = useBeerSort(beers, categoryFilter, searchQuery, advancedFilters);
 
   const {
     getQuantity,
