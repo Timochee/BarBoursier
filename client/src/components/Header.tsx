@@ -218,21 +218,19 @@ export function Header({
               </div>
             )}
 
-            {/* TV Mode Button - Admin only */}
-            {isAdmin && (
-              <Tooltip content="Bar Display (TV Mode)">
-                <button
-                  onClick={onEnterBarDisplay}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors"
-                  style={{ background: 'var(--bg-tertiary)' }}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  <span className="hidden sm:inline">TV</span>
-                </button>
-              </Tooltip>
-            )}
+            {/* TV Mode Button */}
+            <Tooltip content="Bar Display (TV Mode)">
+              <button
+                onClick={onEnterBarDisplay}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors"
+                style={{ background: 'var(--bg-tertiary)' }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span className="hidden sm:inline">TV</span>
+              </button>
+            </Tooltip>
 
             {/* Connection Status */}
             <ConnectionStatus isConnected={isConnected} />

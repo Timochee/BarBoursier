@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { BUY_COOLDOWN_MS } from 'shared';
 
 interface UseBuyQuantityOptions {
@@ -11,6 +11,15 @@ export function useBuyQuantity({ onBuy, keepQuantity = false }: UseBuyQuantityOp
   const [quantities, setQuantities] = useState<Record<number, string>>({});
   const [processingBeer, setProcessingBeer] = useState<number | null>(null);
   const lastBuyTime = useRef<number>(0);
+  const prevKeepQuantity = useRef(keepQuantity);
+
+  // Reset all quantities to 1 when keepQuantity is toggled off
+  useEffect(() => {
+    if (prevKeepQuantity.current && !keepQuantity) {
+      setQuantities({});
+    }
+    prevKeepQuantity.current = keepQuantity;
+  }, [keepQuantity]);
 
   const getQuantity = useCallback((beerId: number): string => {
     return quantities[beerId] ?? '1';

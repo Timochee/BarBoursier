@@ -31,6 +31,11 @@ configurePassport();
 const app = express();
 const httpServer = createServer(app);
 
+// Trust proxy for rate limiting behind reverse proxy (Render, Caddy, etc.)
+if (isProduction) {
+    app.set('trust proxy', 1);
+}
+
 // CORS configuration - restrict to CLIENT_URL in production
 const corsOptions = {
     origin: isProduction ? CLIENT_URL : true,
