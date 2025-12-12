@@ -1,5 +1,6 @@
 import { db } from '../db/connection';
 import type { Preset, BeerDefinition } from 'shared';
+import { recordExists } from './helpers';
 
 // SQL constants to avoid repetition (DRY)
 const PRESET_COLUMNS = `id, name, description, beers, created_at, created_by`;
@@ -111,12 +112,7 @@ export class PresetRepository {
   }
 
   exists(name: string, excludeId?: number): boolean {
-    if (excludeId) {
-      const stmt = db.prepare('SELECT 1 FROM presets WHERE LOWER(name) = LOWER(?) AND id != ?');
-      return stmt.get(name, excludeId) !== undefined;
-    }
-    const stmt = db.prepare('SELECT 1 FROM presets WHERE LOWER(name) = LOWER(?)');
-    return stmt.get(name) !== undefined;
+    return recordExists('presets', name, excludeId);
   }
 
   // Save current beers as a new preset

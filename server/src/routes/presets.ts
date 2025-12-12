@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { presetRepository, beerRepository } from '../repositories';
+import { presetRepository } from '../repositories';
 import { superadminMiddleware } from '../middleware/auth';
-import { getSocketIO } from '../socket';
+import { presetService } from '../services';
 import type { BeerDefinition } from 'shared';
-import { db } from '../db/connection';
 
 const router = Router();
 
@@ -75,53 +74,14 @@ router.post('/save-current', superadminMiddleware, (req: Request, res: Response)
 // POST /api/presets/:id/load - Load a preset (replaces all beers) (Admin only)
 router.post('/:id/load', superadminMiddleware, (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
-  const preset = presetRepository.getById(id);
+  const result = presetService.loadPreset(id);
 
-  if (!preset) {
+  if (!result) {
     res.status(404).json({ error: 'Preset not found' });
     return;
   }
 
-  // Use transaction to ensure atomic operation
-  const loadPreset = db.transaction(() => {
-    // Clear all existing data
-    db.prepare('DELETE FROM price_history').run();
-    db.prepare('DELETE FROM transactions').run();
-    db.prepare('DELETE FROM beers').run();
-    db.prepare('UPDATE batch_counter SET current_batch = 0 WHERE id = 1').run();
-
-    // Insert beers from preset
-    const insertBeer = db.prepare(`
-      INSERT INTO beers (name, base_price, current_price, category, volatility)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-
-    for (const beer of preset.beers) {
-      insertBeer.run(beer.name, beer.basePrice, beer.basePrice, beer.category, beer.volatility);
-    }
-
-    // Record initial price history
-    const beers = beerRepository.getAll();
-    const insertHistory = db.prepare(`
-      INSERT INTO price_history (batch_id, beer_id, price)
-      VALUES (0, ?, ?)
-    `);
-    for (const beer of beers) {
-      insertHistory.run(beer.id, beer.currentPrice);
-    }
-  });
-
-  loadPreset();
-
-  // Emit update to all clients
-  const io = getSocketIO();
-  const beers = beerRepository.getAll();
-  if (io) {
-    io.emit('pricesUpdated', beers);
-    io.emit('marketReset');
-  }
-
-  res.json({ success: true, beers });
+  res.json({ success: true, beers: result.beers });
 });
 
 // PUT /api/presets/:id - Update preset (Admin only)

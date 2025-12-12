@@ -4,14 +4,11 @@ import { PricingService } from './PricingService';
 import { beersToRecords } from '../utils/helpers';
 
 export class MarketService {
-  private pricingService: PricingService | null = null;
-
-  private getPricingService(): PricingService {
-    if (!this.pricingService) {
-      const settings = settingsRepository.getAll();
-      this.pricingService = new PricingService(settings);
-    }
-    return this.pricingService;
+  // Create fresh PricingService each time to ensure settings are up-to-date
+  // Settings can be changed via admin UI, so we need to read them fresh
+  private createPricingService(): PricingService {
+    const settings = settingsRepository.getAll();
+    return new PricingService(settings);
   }
 
   buy(beerId: number, quantity: number): PurchaseResult | null {
@@ -21,7 +18,7 @@ export class MarketService {
     }
 
     const beers = beerRepository.getAll();
-    const { updates, impact } = this.getPricingService().calculatePriceChanges(beers, beer, quantity);
+    const { updates, impact } = this.createPricingService().calculatePriceChanges(beers, beer, quantity);
 
     // Update prices in database
     beerRepository.updatePrices(updates);

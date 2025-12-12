@@ -5,15 +5,11 @@ const repositories_1 = require("../repositories");
 const PricingService_1 = require("./PricingService");
 const helpers_1 = require("../utils/helpers");
 class MarketService {
-    constructor() {
-        this.pricingService = null;
-    }
-    getPricingService() {
-        if (!this.pricingService) {
-            const settings = repositories_1.settingsRepository.getAll();
-            this.pricingService = new PricingService_1.PricingService(settings);
-        }
-        return this.pricingService;
+    // Create fresh PricingService each time to ensure settings are up-to-date
+    // Settings can be changed via admin UI, so we need to read them fresh
+    createPricingService() {
+        const settings = repositories_1.settingsRepository.getAll();
+        return new PricingService_1.PricingService(settings);
     }
     buy(beerId, quantity) {
         const beer = repositories_1.beerRepository.getById(beerId);
@@ -21,7 +17,7 @@ class MarketService {
             return null;
         }
         const beers = repositories_1.beerRepository.getAll();
-        const { updates, impact } = this.getPricingService().calculatePriceChanges(beers, beer, quantity);
+        const { updates, impact } = this.createPricingService().calculatePriceChanges(beers, beer, quantity);
         // Update prices in database
         repositories_1.beerRepository.updatePrices(updates);
         // Record transaction

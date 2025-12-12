@@ -36,10 +36,10 @@ LABEL org.opencontainers.image.title="Bar Boursier" \
       org.opencontainers.image.description="Stock market bar application" \
       org.opencontainers.image.vendor="Bar Boursier"
 
-# DRI: Create non-root user, SLIM: Only install runtime dependencies
+# DRI: Create non-root user, SLIM: Only install runtime dependencies + curl for healthcheck
 RUN addgroup -g 1001 -S app \
     && adduser -u 1001 -S app -G app \
-    && apk add --no-cache libstdc++ \
+    && apk add --no-cache libstdc++ curl \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /app
@@ -63,9 +63,9 @@ ENV NODE_ENV=production \
 
 EXPOSE 3001
 
-# HEALTH: Healthcheck for container orchestration
+# HEALTH: Healthcheck using curl (more efficient than spawning node process)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD node -e "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+    CMD curl -f http://localhost:3001/health || exit 1
 
 # 1C1P: Single process per container
 CMD ["node", "server/dist/index.js"]

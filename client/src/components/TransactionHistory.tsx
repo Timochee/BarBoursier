@@ -1,6 +1,8 @@
 import { useRef, useEffect } from 'react';
 import { useTransactions } from '../hooks';
 import { Modal, ModalHeader, ModalFooter } from './Modal';
+import { ClipboardIcon, LoadingSpinner } from './Icons';
+import { EmptyState } from './EmptyState';
 
 interface TransactionHistoryProps {
   onClose: () => void;
@@ -27,17 +29,15 @@ export function TransactionHistory({ onClose }: TransactionHistoryProps) {
         <div className="overflow-auto max-h-[60vh]">
           {isLoading ? (
             <div className="p-12 text-center">
-              <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full mx-auto mb-4" />
+              <LoadingSpinner className="w-8 h-8 mx-auto mb-4" />
               <p style={{ color: 'var(--text-secondary)' }}>Loading transactions...</p>
             </div>
           ) : transactions?.length === 0 ? (
-            <div className="p-12 text-center" style={{ color: 'var(--text-secondary)' }}>
-              <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              <p className="text-lg font-medium">No transactions yet</p>
-              <p className="text-sm mt-1">Start buying beers to see your history!</p>
-            </div>
+            <EmptyState
+              icon={<ClipboardIcon className="w-16 h-16" />}
+              title="No transactions yet"
+              message="Start buying beers to see your history!"
+            />
           ) : (
             <table className="w-full">
               <thead className="sticky top-0 table-header">

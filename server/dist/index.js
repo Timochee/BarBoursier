@@ -17,6 +17,7 @@ const routes_1 = __importDefault(require("./routes"));
 const auth_1 = __importDefault(require("./routes/auth"));
 const services_1 = require("./services");
 const socket_1 = require("./socket");
+const handlers_1 = require("./socket/handlers");
 const auth_2 = require("./middleware/auth");
 const logger_1 = require("./logger");
 const PORT = process.env.PORT || 3001;
@@ -30,6 +31,10 @@ services_1.chartDataService.initializeHistory();
 // Create Express app
 const app = (0, express_1.default)();
 const httpServer = (0, http_1.createServer)(app);
+// Trust proxy for rate limiting behind reverse proxy (Render, Caddy, etc.)
+if (isProduction) {
+    app.set('trust proxy', 1);
+}
 // CORS configuration - restrict to CLIENT_URL in production
 const corsOptions = {
     origin: isProduction ? CLIENT_URL : true,
@@ -90,50 +95,7 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 // Socket.io events
-io.on('connection', (socket) => {
-    logger_1.logger.info({ socketId: socket.id }, 'Client connected');
-    const beers = services_1.marketService.getAllBeers();
-    socket.emit('pricesUpdated', beers);
-    // Authenticated buy event - requires admin role
-    socket.on('buy', (data) => {
-        const { token, beerId, quantity } = data;
-        if (!token) {
-            socket.emit('error', { message: 'Authentication required' });
-            return;
-        }
-        const user = (0, auth_2.verifySocketToken)(token);
-        if (!user || !(0, auth_2.isAdminOrAbove)(user.role)) {
-            socket.emit('error', { message: 'Admin access required' });
-            return;
-        }
-        const result = services_1.marketService.buy(beerId, quantity);
-        if (result) {
-            logger_1.logger.info({ beerId, quantity, user: user.email }, 'Purchase made');
-            io.emit('pricesUpdated', services_1.marketService.getAllBeers());
-            socket.emit('purchaseResult', result);
-        }
-    });
-    // Authenticated reset event - requires superadmin role
-    socket.on('reset', (data) => {
-        const token = data?.token;
-        if (!token) {
-            socket.emit('error', { message: 'Authentication required' });
-            return;
-        }
-        const user = (0, auth_2.verifySocketToken)(token);
-        if (!user || user.role !== 'superadmin') {
-            socket.emit('error', { message: 'Superadmin access required' });
-            return;
-        }
-        logger_1.logger.info({ user: user.email }, 'Market reset');
-        const beers = services_1.marketService.reset();
-        io.emit('marketReset');
-        io.emit('pricesUpdated', beers);
-    });
-    socket.on('disconnect', () => {
-        logger_1.logger.info({ socketId: socket.id }, 'Client disconnected');
-    });
-});
+(0, handlers_1.registerSocketHandlers)(io);
 // Start server
 const port = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT;
 httpServer.listen(port, '0.0.0.0', () => {

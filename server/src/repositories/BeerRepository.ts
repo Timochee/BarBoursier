@@ -1,5 +1,6 @@
 import { db } from '../db/connection';
 import type { Beer } from 'shared';
+import { recordExists } from './helpers';
 
 // SQL constants to avoid repetition (DRY)
 const BEER_COLUMNS = `id, name, base_price as basePrice, current_price as currentPrice, category, volatility`;
@@ -129,12 +130,7 @@ export class BeerRepository {
   }
 
   exists(name: string, excludeId?: number): boolean {
-    if (excludeId) {
-      const stmt = db.prepare('SELECT 1 FROM beers WHERE LOWER(name) = LOWER(?) AND id != ?');
-      return stmt.get(name, excludeId) !== undefined;
-    }
-    const stmt = db.prepare('SELECT 1 FROM beers WHERE LOWER(name) = LOWER(?)');
-    return stmt.get(name) !== undefined;
+    return recordExists('beers', name, excludeId);
   }
 
   getCategories(): string[] {

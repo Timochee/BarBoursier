@@ -69,7 +69,7 @@ router.post('/', superadminMiddleware, (req, res) => {
     priceHistoryRepository.recordPrices(beersToRecords(allBeers));
 
     // Notify all clients about the new beer
-    emitBeersUpdated();
+    emitBeersUpdated(allBeers);
 
     res.status(201).json(beer);
   } catch (error) {
@@ -111,7 +111,7 @@ router.put('/:id', superadminMiddleware, (req, res) => {
     });
 
     // Notify all clients about the updated beer
-    emitBeersUpdated();
+    emitBeersUpdated(beerRepository.getAll());
 
     res.json(beer);
   } catch (error) {
@@ -134,7 +134,7 @@ router.delete('/:id', superadminMiddleware, (req, res) => {
     const deleted = beerRepository.delete(id);
     if (deleted) {
       // Notify all clients about the deleted beer
-      emitBeersUpdated();
+      emitBeersUpdated(beerRepository.getAll());
 
       res.json({ success: true, message: `Beer "${existing.name}" deleted` });
     } else {
@@ -159,7 +159,7 @@ router.delete('/category/:category', superadminMiddleware, (req, res) => {
   try {
     const deletedCount = beerRepository.deleteByCategory(category);
     // Notify all clients about the deleted beers
-    emitBeersUpdated();
+    emitBeersUpdated(beerRepository.getAll());
 
     res.json({ success: true, message: `Category "${category}" deleted (${deletedCount} beers)`, deletedCount });
   } catch (error) {

@@ -5,6 +5,7 @@ import { CATEGORY_STYLES, getCategoryBadgeStyle } from '../utils/styles';
 import { getChangeClass, PriceArrow } from '../utils/priceChange';
 import { useBeerSort, useBuyQuantity, type SortField } from '../hooks';
 import type { FilterState } from './AdvancedFilters';
+import { SortIcon, ChevronUpIcon, ChevronDownIcon, SpinnerIcon } from './Icons';
 
 interface BeerTableProps {
   beers: Beer[];
@@ -43,24 +44,12 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return (
-        <svg className="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
+      return <SortIcon className="w-4 h-4 opacity-30" />;
     }
     if (sortDirection === 'asc') {
-      return (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-        </svg>
-      );
+      return <ChevronUpIcon />;
     }
-    return (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    );
+    return <ChevronDownIcon />;
   };
 
   const SortableHeader = ({ field, children, align = 'left', className = '' }: { field: SortField; children: React.ReactNode; align?: 'left' | 'right'; className?: string }) => (
@@ -167,11 +156,7 @@ export function BeerTable({ beers, onBuy, keepQuantity = false, categoryFilter, 
                         aria-label={`Buy ${beer.name}`}
                         aria-busy={beerIsProcessing}
                       >
-                        {beerIsProcessing ? (
-                          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-                        ) : (
-                          'Buy'
-                        )}
+                        {beerIsProcessing ? <SpinnerIcon className="w-4 h-4 border-white border-t-transparent" /> : 'Buy'}
                       </button>
                     </td>
                   </>

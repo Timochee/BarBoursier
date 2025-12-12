@@ -17,13 +17,13 @@ npm run build        # Build all workspaces (shared → server → client)
 npm start            # Run production server
 ```
 
-### Docker
+### Docker (local development)
 ```bash
 docker compose build                    # Build image
-docker compose up -d                    # Start with Caddy reverse proxy
+docker compose up -d                    # Start container
 docker compose logs -f barboursier      # View app logs
 ```
-Requires `server/.env.production` file. Uses Caddy for HTTPS/reverse proxy.
+Requires `server/.env.production` file. Production is deployed on Render (handles HTTPS/proxy).
 
 ## Tech Stack
 

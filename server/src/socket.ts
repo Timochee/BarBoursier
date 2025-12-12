@@ -1,4 +1,5 @@
 import { Server as SocketIOServer } from 'socket.io';
+import type { Beer } from 'shared';
 
 let io: SocketIOServer | null = null;
 
@@ -10,11 +11,9 @@ export function getSocketIO(): SocketIOServer | null {
   return io;
 }
 
-export function emitBeersUpdated(): void {
+// Emit beers updated event - caller provides the beers to avoid circular dependency
+export function emitBeersUpdated(beers: Beer[]): void {
   if (io) {
-    // Import here to avoid circular dependency
-    const { marketService } = require('./services');
-    const beers = marketService.getAllBeers();
     io.emit('beersUpdated', beers);
   }
 }

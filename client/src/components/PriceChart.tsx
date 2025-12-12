@@ -11,38 +11,11 @@ import {
 } from 'recharts';
 import type { ChartData, Beer } from 'shared';
 import { getSectorColor, createBeerColorMap, getBeerColor } from '../utils/colors';
+import { formatTime, formatDateTime } from '../utils/helpers';
 
 interface PriceChartProps {
   chartData: ChartData | null;
   beers: Beer[];
-}
-
-function formatTime(timestamp: string): string {
-  try {
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) {
-      return timestamp;
-    }
-    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return timestamp;
-  }
-}
-
-function formatDateTime(timestamp: string): string {
-  try {
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) {
-      return `Transaction #${timestamp}`;
-    }
-    return date.toLocaleString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  } catch {
-    return `Transaction #${timestamp}`;
-  }
 }
 
 export function PriceChart({ chartData, beers }: PriceChartProps) {

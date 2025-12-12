@@ -10,11 +10,9 @@ function setSocketIO(socketIO) {
 function getSocketIO() {
     return io;
 }
-function emitBeersUpdated() {
+// Emit beers updated event - caller provides the beers to avoid circular dependency
+function emitBeersUpdated(beers) {
     if (io) {
-        // Import here to avoid circular dependency
-        const { marketService } = require('./services');
-        const beers = marketService.getAllBeers();
         io.emit('beersUpdated', beers);
     }
 }

@@ -118,9 +118,10 @@ export class PricingService {
     return { weights, totalWeight };
   }
 
-  private applyPurchasedBeerIncrease(ctx: PriceContext, beer: Beer, rawPriceIncrease: number): void {
+  // Consolidated: Apply price increase to any beer (DRY)
+  private applyBeerPriceIncrease(ctx: PriceContext, beer: Beer, rawIncrease: number): void {
     const meanReversion = this.calculateMeanReversion(beer);
-    let newPrice = this.roundToQuarter(beer.currentPrice + rawPriceIncrease + meanReversion);
+    let newPrice = this.roundToQuarter(beer.currentPrice + rawIncrease + meanReversion);
     newPrice = this.clampPrice(newPrice);
     const change = newPrice - beer.currentPrice;
 
@@ -130,22 +131,17 @@ export class PricingService {
     ctx.sectorChanges[beer.category] += change;
   }
 
+  private applyPurchasedBeerIncrease(ctx: PriceContext, beer: Beer, rawPriceIncrease: number): void {
+    this.applyBeerPriceIncrease(ctx, beer, rawPriceIncrease);
+  }
+
   private applySameSectorIncreases(
     ctx: PriceContext,
     sameSectorBeers: Beer[],
     correlatedIncreases: Map<number, number>
   ): void {
     for (const beer of sameSectorBeers) {
-      const rawCorrelatedIncrease = correlatedIncreases.get(beer.id) || 0;
-      const meanReversion = this.calculateMeanReversion(beer);
-      let newPrice = this.roundToQuarter(beer.currentPrice + rawCorrelatedIncrease + meanReversion);
-      newPrice = this.clampPrice(newPrice);
-      const change = newPrice - beer.currentPrice;
-
-      ctx.totalActualIncrease += change;
-      ctx.updates.push({ id: beer.id, price: newPrice });
-      ctx.beerChanges[beer.category][beer.name] = change;
-      ctx.sectorChanges[beer.category] += change;
+      this.applyBeerPriceIncrease(ctx, beer, correlatedIncreases.get(beer.id) || 0);
     }
   }
 

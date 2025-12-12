@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.beerRepository = exports.BeerRepository = void 0;
 const connection_1 = require("../db/connection");
+const helpers_1 = require("./helpers");
 // SQL constants to avoid repetition (DRY)
 const BEER_COLUMNS = `id, name, base_price as basePrice, current_price as currentPrice, category, volatility`;
 const SELECT_BEER = `SELECT ${BEER_COLUMNS} FROM beers`;
@@ -98,12 +99,7 @@ class BeerRepository {
         return result.changes > 0;
     }
     exists(name, excludeId) {
-        if (excludeId) {
-            const stmt = connection_1.db.prepare('SELECT 1 FROM beers WHERE LOWER(name) = LOWER(?) AND id != ?');
-            return stmt.get(name, excludeId) !== undefined;
-        }
-        const stmt = connection_1.db.prepare('SELECT 1 FROM beers WHERE LOWER(name) = LOWER(?)');
-        return stmt.get(name) !== undefined;
+        return (0, helpers_1.recordExists)('beers', name, excludeId);
     }
     getCategories() {
         const stmt = connection_1.db.prepare('SELECT DISTINCT category FROM beers ORDER BY category');

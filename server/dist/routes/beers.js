@@ -58,7 +58,7 @@ router.post('/', auth_1.superadminMiddleware, (req, res) => {
         const allBeers = repositories_1.beerRepository.getAll();
         repositories_1.priceHistoryRepository.recordPrices((0, helpers_1.beersToRecords)(allBeers));
         // Notify all clients about the new beer
-        (0, socket_1.emitBeersUpdated)();
+        (0, socket_1.emitBeersUpdated)(allBeers);
         res.status(201).json(beer);
     }
     catch (error) {
@@ -94,7 +94,7 @@ router.put('/:id', auth_1.superadminMiddleware, (req, res) => {
             volatility: volatility !== undefined ? (0, helpers_1.roundPrice)(volatility) : undefined,
         });
         // Notify all clients about the updated beer
-        (0, socket_1.emitBeersUpdated)();
+        (0, socket_1.emitBeersUpdated)(repositories_1.beerRepository.getAll());
         res.json(beer);
     }
     catch (error) {
@@ -114,7 +114,7 @@ router.delete('/:id', auth_1.superadminMiddleware, (req, res) => {
         const deleted = repositories_1.beerRepository.delete(id);
         if (deleted) {
             // Notify all clients about the deleted beer
-            (0, socket_1.emitBeersUpdated)();
+            (0, socket_1.emitBeersUpdated)(repositories_1.beerRepository.getAll());
             res.json({ success: true, message: `Beer "${existing.name}" deleted` });
         }
         else {
@@ -137,7 +137,7 @@ router.delete('/category/:category', auth_1.superadminMiddleware, (req, res) => 
     try {
         const deletedCount = repositories_1.beerRepository.deleteByCategory(category);
         // Notify all clients about the deleted beers
-        (0, socket_1.emitBeersUpdated)();
+        (0, socket_1.emitBeersUpdated)(repositories_1.beerRepository.getAll());
         res.json({ success: true, message: `Category "${category}" deleted (${deletedCount} beers)`, deletedCount });
     }
     catch (error) {

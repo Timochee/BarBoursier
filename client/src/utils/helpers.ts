@@ -14,6 +14,36 @@ export function formatDate(dateString: string): string {
 }
 
 /**
+ * Format a timestamp to French time format (HH:mm)
+ */
+export function formatTime(timestamp: string): string {
+  try {
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return timestamp;
+    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return timestamp;
+  }
+}
+
+/**
+ * Format a timestamp to French time with seconds (HH:mm:ss)
+ */
+export function formatDateTime(timestamp: string): string {
+  try {
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return `Transaction #${timestamp}`;
+    return date.toLocaleString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  } catch {
+    return `Transaction #${timestamp}`;
+  }
+}
+
+/**
  * Extract error message from unknown error type with fallback
  */
 export function getErrorMessage(error: unknown, defaultMsg: string): string {

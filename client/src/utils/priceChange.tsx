@@ -1,4 +1,5 @@
 import type { Beer } from 'shared';
+import { ArrowUpIcon, ArrowDownIcon } from '../components/Icons';
 
 // Get CSS class for price change styling
 export function getChangeClass(change: number): string {
@@ -15,18 +16,10 @@ export function getChangePercent(beer: Beer): number {
 // Arrow icon for price changes (up/down/neutral)
 export function PriceArrow({ change, className = 'w-4 h-4' }: { change: number; className?: string }) {
   if (change > 0) {
-    return (
-      <svg className={`${className} inline-block ml-1`} fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-        <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-      </svg>
-    );
+    return <ArrowUpIcon className={`${className} inline-block ml-1`} />;
   }
   if (change < 0) {
-    return (
-      <svg className={`${className} inline-block ml-1`} fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-        <path fillRule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clipRule="evenodd" />
-      </svg>
-    );
+    return <ArrowDownIcon className={`${className} inline-block ml-1`} />;
   }
   return null;
 }

@@ -1,66 +1,57 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import type { Admin } from 'shared';
 
 export function useAdmins(isSuperadmin: boolean) {
-  const [admins, setAdmins] = useState<Admin[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchAdmins = useCallback(async () => {
-    if (!isSuperadmin) return;
+  const { data: admins = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['admins'],
+    queryFn: api.getAdmins,
+    enabled: isSuperadmin,
+  });
 
-    setIsLoading(true);
-    setError(null);
+  const addAdminMutation = useMutation({
+    mutationFn: ({ email, name }: { email: string; name: string }) =>
+      api.addAdmin(email, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admins'] });
+    },
+  });
+
+  const removeAdminMutation = useMutation({
+    mutationFn: (id: number) => api.removeAdmin(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admins'] });
+    },
+  });
+
+  // Backward-compatible wrapper that returns boolean
+  const addAdmin = async (email: string, name: string): Promise<boolean> => {
     try {
-      const data = await api.getAdmins();
-      setAdmins(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch admins');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isSuperadmin]);
-
-  useEffect(() => {
-    fetchAdmins();
-  }, [fetchAdmins]);
-
-  const addAdmin = useCallback(async (email: string, name: string) => {
-    setError(null);
-    try {
-      const newAdmin = await api.addAdmin(email, name);
-      setAdmins((prev) => [newAdmin, ...prev]);
+      await addAdminMutation.mutateAsync({ email, name });
       return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add admin');
+    } catch {
       return false;
     }
-  }, []);
+  };
 
-  const removeAdmin = useCallback(async (id: number) => {
-    setError(null);
+  // Backward-compatible wrapper that returns boolean
+  const removeAdmin = async (id: number): Promise<boolean> => {
     try {
-      await api.removeAdmin(id);
-      setAdmins((prev) => prev.filter((admin) => admin.id !== id));
+      await removeAdminMutation.mutateAsync(id);
       return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove admin');
+    } catch {
       return false;
     }
-  }, []);
-
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+  };
 
   return {
     admins,
     isLoading,
-    error,
+    error: error instanceof Error ? error.message : error ? String(error) : null,
     addAdmin,
     removeAdmin,
-    clearError,
-    refetch: fetchAdmins,
+    clearError: () => {}, // No-op for backward compatibility
+    refetch,
   };
 }
