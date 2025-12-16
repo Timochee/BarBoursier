@@ -58,14 +58,14 @@ RUN mkdir -p /app/data && chown -R app:app /app/data
 USER app
 
 # CONFIG OUT: Configuration via environment variables
-ENV NODE_ENV=production \
-    PORT=3001
+# Note: PORT is provided by Render at runtime, don't hardcode it
+ENV NODE_ENV=production
 
-EXPOSE 3001
+# Render provides dynamic PORT, expose common default
+EXPOSE 10000
 
-# HEALTH: Healthcheck using curl (more efficient than spawning node process)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3001/health || exit 1
+# Note: HEALTHCHECK removed - Render uses its own health checking on the dynamic PORT
+# For local Docker testing, use: docker run -e PORT=3001 -p 3001:3001 ...
 
 # 1C1P: Single process per container
 CMD ["node", "server/dist/index.js"]
