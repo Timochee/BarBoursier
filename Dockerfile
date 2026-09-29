@@ -10,12 +10,12 @@ WORKDIR /app
 COPY package*.json ./
 COPY client/package*.json ./client/
 COPY server/package*.json ./server/
-COPY shared/package*.json ./shared/
+# shared is compiled by the root postinstall, so its sources are needed here
+COPY shared/ ./shared/
 
 RUN npm ci --ignore-scripts=false
 
 # Copy source code (changes more frequently)
-COPY shared/ ./shared/
 COPY client/ ./client/
 COPY server/ ./server/
 COPY tsconfig*.json ./
