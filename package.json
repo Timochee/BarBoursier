@@ -13,10 +13,15 @@
     "dev:client": "npm run dev --workspace=client",
     "dev:server": "npm run dev --workspace=server",
     "build": "npm run build --workspace=shared && npm run build --workspace=server && npm run build --workspace=client",
-    "start": "npm run start --workspace=server"
+    "start": "npm run start --workspace=server",
+    "test": "npm run test --workspace=server",
+    "typecheck": "npm run build --workspace=shared && npm run typecheck --workspace=server && tsc -b client"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
     "typescript": "^5.5.3"
+  },
+  "engines": {
+    "node": ">=22.12"
   }
 }

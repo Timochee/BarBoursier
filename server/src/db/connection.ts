@@ -3,14 +3,15 @@ import fs from 'fs';
 import path from 'path';
 import {logger} from '../logger';
 
-const DB_PATH = process.env.NODE_ENV === 'production'
-    ? '/app/data/barboursier.db'
-    : path.join(__dirname, '../../data/barboursier.db');
+const IN_MEMORY = ':memory:';
+const DB_PATH = process.env.DB_PATH
+    ?? (process.env.NODE_ENV === 'production'
+        ? '/app/data/barboursier.db'
+        : path.join(__dirname, '../../data/barboursier.db'));
 const INIT_SQL_PATH = path.join(__dirname, 'init.sql');
 
-const dataDir = path.dirname(DB_PATH);
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, {recursive: true});
+if (DB_PATH !== IN_MEMORY) {
+    fs.mkdirSync(path.dirname(DB_PATH), {recursive: true});
 }
 
 export const db = new Database(DB_PATH);
