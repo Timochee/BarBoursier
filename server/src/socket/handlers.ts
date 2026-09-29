@@ -1,6 +1,6 @@
 import type { Server, Socket } from 'socket.io';
 import type { BuyRequest } from 'shared';
-import { marketService } from '../services';
+import { marketService, BUY_ERROR_MESSAGES } from '../services';
 import { verifySocketToken, isAdminOrAbove } from '../middleware/auth';
 import { logger } from '../logger';
 
@@ -53,12 +53,15 @@ export function registerSocketHandlers(io: Server) {
       const user = authenticateSocket(socket, token, 'admin');
       if (!user) return;
 
-      const result = marketService.buy(beerId, quantity);
-      if (result) {
-        logger.info({ beerId, quantity, user: user.email }, 'Purchase made');
-        io.emit('pricesUpdated', marketService.getAllBeers());
-        socket.emit('purchaseResult', result);
+      const outcome = marketService.buy(beerId, quantity);
+      if (!outcome.ok) {
+        socket.emit('error', { message: BUY_ERROR_MESSAGES[outcome.error] });
+        return;
       }
+
+      logger.info({ beerId, quantity, user: user.email }, 'Purchase made');
+      io.emit('pricesUpdated', marketService.getAllBeers());
+      socket.emit('purchaseResult', outcome.result);
     });
 
     // Reset event - requires superadmin role

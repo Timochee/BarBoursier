@@ -1,7 +1,19 @@
 import type { Beer, PurchaseResult, MarketStats } from 'shared';
+import { isValidBuyQuantity } from 'shared';
 import { beerRepository, transactionRepository, priceHistoryRepository, settingsRepository } from '../repositories';
 import { PricingService } from './PricingService';
 import { beersToRecords } from '../utils/helpers';
+
+export type BuyError = 'invalid_quantity' | 'beer_not_found';
+
+export const BUY_ERROR_MESSAGES: Record<BuyError, string> = {
+  invalid_quantity: 'Invalid quantity',
+  beer_not_found: 'Beer not found',
+};
+
+export type BuyOutcome =
+  | { ok: true; result: PurchaseResult }
+  | { ok: false; error: BuyError };
 
 export class MarketService {
   // Create fresh PricingService each time to ensure settings are up-to-date
@@ -11,10 +23,14 @@ export class MarketService {
     return new PricingService(settings);
   }
 
-  buy(beerId: number, quantity: number): PurchaseResult | null {
+  buy(beerId: number, quantity: number): BuyOutcome {
+    if (!isValidBuyQuantity(quantity)) {
+      return { ok: false, error: 'invalid_quantity' };
+    }
+
     const beer = beerRepository.getById(beerId);
     if (!beer) {
-      return null;
+      return { ok: false, error: 'beer_not_found' };
     }
 
     const beers = beerRepository.getAll();
@@ -34,8 +50,8 @@ export class MarketService {
     const updatedBeer = beerRepository.getById(beerId)!;
 
     return {
-      beer: updatedBeer,
-      impact,
+      ok: true,
+      result: { beer: updatedBeer, impact },
     };
   }
 
