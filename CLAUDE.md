@@ -188,10 +188,10 @@ effectiveVolatility = beer.volatility × modifier
 
 ### 2. Price Increase (Purchased Beer)
 ```
-increase = baseMove × effectiveVolatility × currentPrice × √quantity
+increase = baseMove × effectiveVolatility × currentPrice × quantity^0.7
 ```
 - `baseMove`: 0.45 (configurable in DB)
-- `√quantity`: Diminishing returns (4 beers ≠ 4× effect of 1)
+- `quantity^0.7`: Diminishing returns (4 beers = 2.6× the effect of 1)
 
 ### 3. Correlated Increase (Same Sector)
 ```

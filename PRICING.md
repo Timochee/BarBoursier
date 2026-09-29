@@ -51,10 +51,10 @@ effectiveVolatility = volatility × modifier
 When a user buys a beer:
 
 ```
-increase = baseMove × effectiveVolatility × currentPrice × √quantity
+increase = baseMove × effectiveVolatility × currentPrice × quantity^0.7
 ```
 
-- Sub-linear growth (√quantity) = diminishing returns
+- Sub-linear growth (quantity^0.7) = diminishing returns
 - Proportional to current price
 - Controlled by volatility
 

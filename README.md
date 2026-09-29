@@ -1,170 +1,124 @@
 # Bar Boursier
 
-A web-based stock market bar application where beer prices fluctuate based on purchases. The market is **zero-sum**: when some beers go up, others must go down by the same total amount.
+[![CI](https://github.com/Timochee/BarBoursier/actions/workflows/ci.yml/badge.svg)](https://github.com/Timochee/BarBoursier/actions/workflows/ci.yml)
 
-![Beer Market](https://img.shields.io/badge/Beer-Market-amber)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
-![React](https://img.shields.io/badge/React-18-61dafb)
-![Node.js](https://img.shields.io/badge/Node.js-Express-green)
+A stock-exchange bar: beer prices move in real time with every purchase. The market is **zero-sum**: when some beers go up, others go down by the same total amount.
+
+**Live demo:** [barboursier.onrender.com](https://barboursier.onrender.com) (free tier, the first load can take ~30 s to wake up)
 
 ## Features
 
-- **Real-time price updates** via WebSocket
-- **Zero-sum market**: price increases are balanced by decreases elsewhere
-- **Sector correlations**: beers in the same category move together
-- **Mean reversion**: prices drift back to base values over time
-- **Google OAuth authentication** with email whitelist for admin access
-- **Guest mode**: anyone can view prices and charts
-- **Admin mode**: manage beers, make purchases, reset market
-- **Dark/Light theme** support
-- **Responsive design** for mobile and desktop
+- **Real-time prices** pushed to every screen over WebSocket
+- **Zero-sum pricing engine** with sector correlations, mean reversion and crash protection
+- **Price chart** by sector or by beer, plus a full-screen TV mode for the bar
+- **Google sign-in** with three roles: guest (read-only), admin (sell beers), superadmin (manage beers, admins, presets, reset)
+- **Market presets** to save and restore a beer lineup
+- Dark / light theme, responsive layout
 
-## Tech Stack
+## Tech stack
 
-### Frontend
-- React 18 + TypeScript
-- Vite
-- TailwindCSS
-- Recharts (price charts)
-- React Query
-- Socket.io-client
+| Layer | Stack |
+|-------|-------|
+| Frontend | React 18, TypeScript, Vite, TailwindCSS, React Query, Recharts, Socket.io client |
+| Backend | Node.js 22, Express, Socket.io, better-sqlite3, Passport (Google OAuth 2.0), JWT, Pino |
+| Shared | Workspace package with domain types, constants and pricing configuration |
+| Quality | Vitest, strict TypeScript, GitHub Actions CI |
+| Deployment | Multi-stage Docker image (non-root, `/health` endpoint) on Render |
 
-### Backend
-- Node.js + Express + TypeScript
-- SQLite (better-sqlite3)
-- Socket.io
-- Passport.js (Google OAuth)
-- JWT authentication
+## Architecture
 
-## Getting Started
+```mermaid
+flowchart LR
+  subgraph client [client - React]
+    UI[Components] --> Hooks --> Services[api / socket services]
+  end
+  subgraph server [server - Express]
+    Routes[REST routes] --> Svc[Services]
+    Socket[Socket.io handlers] --> Svc
+    Svc --> Pricing[PricingService]
+    Svc --> Repos[Repositories] --> DB[(SQLite)]
+  end
+  Services -- HTTP / JWT --> Routes
+  Services <-- WebSocket --> Socket
+  shared[[shared types and constants]] -.-> client
+  shared -.-> server
+```
 
-### Prerequisites
+- **Routes and socket handlers** authenticate, validate and translate; they hold no business logic.
+- **Services** own the use cases (`MarketService.buy`, `reset`, chart data).
+- **`PricingService`** is a pure function of the market state, which makes the pricing rules unit-testable without a database.
+- **Repositories** are the only layer that talks SQL, always through prepared statements.
+- Roles are resolved server-side on every request from the database, never trusted from the token.
 
-- Node.js 18+
-- npm
+## Pricing engine
 
-### Installation
+On each purchase:
+
+1. The purchased beer rises by `baseMove × volatility × price × quantity^0.7` (bulk orders are dampened).
+2. Beers in the same sector follow, weighted by `sectorCorrelation` and relative volatility.
+3. Beers in other sectors absorb the increase, weighted by a sector affinity matrix and their volatility.
+4. Protections: max 10% drop per transaction, a brake near the price floor, and hard min/max prices.
+5. If the other sectors cannot absorb the whole increase (for example, all at the floor), the increases are scaled down, so the market stays zero-sum.
+6. Every price drifts back toward its base price (mean reversion, faster for pils, slower for trappists).
+
+Prices move in €0.25 steps. The zero-sum invariant is covered by a 200-purchase deterministic simulation test. See [PRICING.md](PRICING.md) for the full model.
+
+## Getting started
+
+Prerequisites: Node.js 22.12+ and npm.
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/barboursier.git
-cd barboursier
-
-# Install dependencies
+git clone https://github.com/Timochee/BarBoursier.git
+cd BarBoursier
 npm install
+cp server/.env.example server/.env.development
+npm run dev
 ```
+
+The client runs on [http://localhost:5173](http://localhost:5173) and the API on port 3001. The app works as a read-only guest without OAuth credentials.
 
 ### Configuration
 
-1. Copy the example environment file:
-```bash
-cp server/.env.example server/.env
-```
+To enable sign-in, create OAuth 2.0 credentials in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) with the redirect URI `http://localhost:3001/api/auth/google/callback`, then fill `server/.env.development`:
 
-2. Configure Google OAuth (optional, for admin features):
-   - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-   - Create a new project or select an existing one
-   - Configure OAuth consent screen
-   - Create OAuth 2.0 credentials (Web application)
-   - Add authorized redirect URI: `http://localhost:3001/api/auth/google/callback`
-   - Copy Client ID and Client Secret to your `.env`
+| Variable | Purpose |
+|----------|---------|
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth credentials |
+| `SUPERADMIN_EMAIL` | Account that manages beers and admins |
+| `JWT_SECRET` | Token signing key (`openssl rand -base64 32`) |
+| `CLIENT_URL` | Frontend origin for CORS and OAuth redirects |
+| `OAUTH_CALLBACK_URL` | Public callback URL in production |
 
-3. Update your `.env` file:
-```env
-# Google OAuth
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
+Other admins are added from the UI by the superadmin.
 
-# Admin emails (comma-separated)
-ADMIN_EMAILS=admin@example.com
+## Scripts
 
-# JWT Secret (generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))")
-JWT_SECRET=your-secret-key
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Client and server with hot reload |
+| `npm test` | Unit and integration tests (Vitest, in-memory SQLite) |
+| `npm run typecheck` | Type-check every workspace |
+| `npm run build` | Production build (shared, then server, then client) |
+| `docker compose up -d` | Run the production image locally (needs `server/.env.production`) |
 
-# Server config
-PORT=3001
-CLIENT_URL=http://localhost:5173
-```
-
-### Running the Application
-
-```bash
-# Development (runs both client and server)
-npm run dev
-
-# Or run separately:
-npm run dev:client   # Frontend only (port 5173)
-npm run dev:server   # Backend only (port 3001)
-```
-
-Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-### Building for Production
-
-```bash
-npm run build
-npm start
-```
-
-## Project Structure
+## Project structure
 
 ```
-barboursier/
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── components/     # UI components
-│   │   ├── hooks/          # Custom React hooks
-│   │   └── services/       # API client
-│   └── ...
-├── server/                 # Express backend
-│   ├── src/
-│   │   ├── db/             # Database setup
-│   │   ├── middleware/     # Auth middleware
-│   │   ├── repositories/   # Data access layer
-│   │   ├── routes/         # API routes
-│   │   └── services/       # Business logic
-│   └── ...
-├── shared/                 # Shared TypeScript types
-└── ...
+client/   React app (components, hooks, services, utils)
+server/   Express API (routes, socket, services, repositories, db, middleware)
+shared/   Types, constants and pricing configuration used by both sides
 ```
 
-## API Endpoints
+## API
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/beers` | Get all beers | - |
-| POST | `/api/beers` | Create a beer | Admin |
-| PUT | `/api/beers/:id` | Update a beer | Admin |
-| DELETE | `/api/beers/:id` | Delete a beer | Admin |
-| POST | `/api/market/buy` | Buy a beer | Admin |
-| POST | `/api/market/reset` | Reset market | Admin |
-| GET | `/api/market/chart-data` | Get price history | - |
-| GET | `/api/auth/google` | Initiate Google OAuth | - |
-| GET | `/api/auth/verify` | Verify JWT token | - |
+| Method | Endpoint | Role |
+|--------|----------|------|
+| GET | `/api/beers`, `/api/market/total`, `/api/market/chart-data` | Public |
+| POST | `/api/market/buy` | Admin |
+| POST | `/api/market/reset` | Superadmin |
+| POST, PUT, DELETE | `/api/beers[/:id]` | Superadmin |
+| GET, POST, DELETE | `/api/admins[/:id]` | Superadmin |
+| GET, POST, PUT, DELETE | `/api/presets[/:id]` | Superadmin |
+| GET | `/api/auth/google`, `/api/auth/verify` | Public / authenticated |
 
-## WebSocket Events
-
-| Event | Direction | Description |
-|-------|-----------|-------------|
-| `pricesUpdated` | Server → Client | Prices have changed |
-| `purchaseResult` | Server → Client | Purchase result |
-| `marketReset` | Server → Client | Market was reset |
-
-## Pricing Algorithm
-
-The pricing algorithm ensures a **zero-sum market**:
-
-1. **Purchase Impact**: When a beer is bought, its price increases based on quantity and volatility
-2. **Sector Correlation**: Beers in the same sector increase proportionally
-3. **Redistribution**: Other beers decrease to maintain market equilibrium
-4. **Mean Reversion**: All prices slowly drift back to their base values
-5. **Crash Protection**: Maximum 10% decrease per transaction, with floor protection near minimum price
-
-### Beer Sectors
-
-| Sector | Beers | Volatility |
-|--------|-------|------------|
-| Pils | Jupiler, Stella, Maes | Low (0.22-0.25) |
-| Abbey | Leffe, Grimbergen, Affligem | Medium (0.32-0.38) |
-| Trappist | Chimay, Orval, Westmalle, Rochefort | High (0.45-0.55) |
-| Specialty | Duvel, Delirium, Kwak, Chouffe | High (0.40-0.50) |
+Real-time events: the client emits `buy` and `reset`, and the server broadcasts `pricesUpdated`, `beersUpdated`, `purchaseResult` and `marketReset`.
