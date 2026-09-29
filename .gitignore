@@ -5,6 +5,8 @@ node_modules/
 dist/
 out-tsc/
 *.tsbuildinfo
+client/vite.config.js
+client/vite.config.d.ts
 
 # IDE
 .vscode/
