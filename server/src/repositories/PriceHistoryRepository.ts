@@ -38,13 +38,16 @@ export class PriceHistoryRepository {
    * Get all price history grouped by beer, ordered by batch
    */
   getAllHistory(limit: number = 100): Map<number, number[]> {
-    // Get prices ordered by batch_id to ensure correct ordering
+    // Only the latest `limit` batches, in chronological order
     const stmt = db.prepare(`
       SELECT beer_id as beerId, price, batch_id
       FROM price_history
+      WHERE batch_id IN (
+        SELECT DISTINCT batch_id FROM price_history ORDER BY batch_id DESC LIMIT ?
+      )
       ORDER BY batch_id ASC
     `);
-    const rows = stmt.all() as { beerId: number; price: number; batch_id: number }[];
+    const rows = stmt.all(limit) as { beerId: number; price: number; batch_id: number }[];
 
     // Group by batch first to get the correct number of data points
     const batchMap = new Map<number, Map<number, number>>();
@@ -55,8 +58,7 @@ export class PriceHistoryRepository {
       batchMap.get(row.batch_id)!.set(row.beerId, row.price);
     }
 
-    // Get sorted batch IDs and limit them
-    const sortedBatches = Array.from(batchMap.keys()).sort((a, b) => a - b).slice(0, limit);
+    const sortedBatches = Array.from(batchMap.keys()).sort((a, b) => a - b);
 
     // Build history arrays for each beer
     const history = new Map<number, number[]>();
@@ -77,12 +79,16 @@ export class PriceHistoryRepository {
    * Get time labels (timestamps) for the chart
    */
   getTimeLabels(limit: number = 100): string[] {
+    // Latest `limit` batches, returned in chronological order
     const stmt = db.prepare(`
-      SELECT batch_id, MIN(timestamp) as timestamp
-      FROM price_history
-      GROUP BY batch_id
+      SELECT batch_id, timestamp FROM (
+        SELECT batch_id, MIN(timestamp) as timestamp
+        FROM price_history
+        GROUP BY batch_id
+        ORDER BY batch_id DESC
+        LIMIT ?
+      )
       ORDER BY batch_id ASC
-      LIMIT ?
     `);
     const rows = stmt.all(limit) as { batch_id: number; timestamp: string }[];
     return rows.map(r => r.timestamp);
