@@ -6,6 +6,10 @@ import {
   MAX_DECREASE_RATIO,
 } from 'shared';
 
+// Prices move in 0.25 steps, so a residual below this is considered balanced
+const PRICE_STEP = 0.25;
+const ZERO_SUM_TOLERANCE = 0.2;
+
 // Internal types for price calculation
 interface BeerResult {
   beer: Beer;
@@ -13,77 +17,55 @@ interface BeerResult {
   change: number;
 }
 
-interface PriceContext {
-  updates: { id: number; price: number }[];
-  sectorChanges: Record<string, number>;
-  beerChanges: Record<string, Record<string, number>>;
-  totalActualIncrease: number;
-}
-
 export class PricingService {
   constructor(private settings: Settings) {}
 
   /**
    * Calculate all price changes after a beer purchase
-   * Ensures zero-sum market using a two-pass approach
+   * Ensures zero-sum market: increases are offset by other sectors,
+   * and scaled down when those sectors cannot absorb them
    */
   calculatePriceChanges(
     beers: Beer[],
     purchasedBeer: Beer,
     quantity: number
   ): { updates: { id: number; price: number }[]; impact: PurchaseImpact } {
-    // Initialize context
-    const ctx = this.initializeContext(beers);
-
-    // Calculate base increase for purchased beer
     // Using quantity^0.7 for stronger impact than sqrt but not linear
     // sqrt: qty 4 = 2x, qty 9 = 3x | pow 0.7: qty 4 = 2.6x, qty 9 = 4.7x
     const purchasedEffectiveVol = this.calculateEffectiveVolatility(purchasedBeer);
     const quantityMultiplier = Math.pow(quantity, 0.7);
     const rawPriceIncrease = this.settings.baseMove * purchasedEffectiveVol * purchasedBeer.currentPrice * quantityMultiplier;
 
-    // Calculate correlated increases for same-sector beers
     const sameSectorBeers = beers.filter(b => b.category === purchasedBeer.category && b.id !== purchasedBeer.id);
     const correlatedIncreases = this.calculateCorrelatedIncreases(sameSectorBeers, rawPriceIncrease, purchasedEffectiveVol);
 
-    // Calculate decrease weights for other sector beers
     const otherSectorBeers = beers.filter(b => b.category !== purchasedBeer.category);
     const { weights: decreaseWeights, totalWeight } = this.calculateDecreaseWeights(otherSectorBeers, purchasedBeer);
 
-    // Apply increases (purchased beer + same sector)
-    this.applyPurchasedBeerIncrease(ctx, purchasedBeer, rawPriceIncrease);
-    this.applySameSectorIncreases(ctx, sameSectorBeers, correlatedIncreases);
+    // Increases: purchased beer first, then same sector
+    const increaseResults = [
+      this.calculateIncrease(purchasedBeer, rawPriceIncrease),
+      ...sameSectorBeers.map(b => this.calculateIncrease(b, correlatedIncreases.get(b.id) ?? 0)),
+    ];
+    const totalIncrease = this.sumChanges(increaseResults);
 
-    // Calculate decreases for other sectors (first pass)
-    const otherBeerResults = this.calculateDecreases(otherSectorBeers, decreaseWeights, totalWeight, ctx.totalActualIncrease);
+    // Decreases for other sectors, balanced against the increases
+    const decreaseResults = this.calculateDecreases(otherSectorBeers, decreaseWeights, totalWeight, totalIncrease);
+    const excess = this.balanceZeroSum(decreaseResults, totalIncrease);
+    this.scaleDownIncreases(increaseResults, excess);
 
-    // Balance to achieve zero-sum (second pass)
-    this.balanceZeroSum(otherBeerResults, ctx.totalActualIncrease);
-
-    // Finalize other beer updates
-    this.finalizeOtherBeerUpdates(ctx, otherBeerResults);
-
+    const results = [...increaseResults, ...decreaseResults];
     return {
-      updates: ctx.updates,
+      updates: results.map(r => ({ id: r.beer.id, price: r.newPrice })),
       impact: {
         purchasedBeerName: purchasedBeer.name,
         quantity,
-        sectorChanges: ctx.sectorChanges,
-        beerChanges: ctx.beerChanges,
+        ...this.summarizeChanges(beers, results),
       },
     };
   }
 
   // --- Private helper methods (extracted for KISS) ---
-
-  private initializeContext(beers: Beer[]): PriceContext {
-    const sectorChanges: Record<string, number> = {};
-    const beerChanges: Record<string, Record<string, number>> = {};
-    const sectors = [...new Set(beers.map(b => b.category))];
-    sectors.forEach(s => { sectorChanges[s] = 0; beerChanges[s] = {}; });
-
-    return { updates: [], sectorChanges, beerChanges, totalActualIncrease: 0 };
-  }
 
   private calculateCorrelatedIncreases(
     sameSectorBeers: Beer[],
@@ -118,31 +100,10 @@ export class PricingService {
     return { weights, totalWeight };
   }
 
-  // Consolidated: Apply price increase to any beer (DRY)
-  private applyBeerPriceIncrease(ctx: PriceContext, beer: Beer, rawIncrease: number): void {
+  private calculateIncrease(beer: Beer, rawIncrease: number): BeerResult {
     const meanReversion = this.calculateMeanReversion(beer);
-    let newPrice = this.roundToQuarter(beer.currentPrice + rawIncrease + meanReversion);
-    newPrice = this.clampPrice(newPrice);
-    const change = newPrice - beer.currentPrice;
-
-    ctx.totalActualIncrease += change;
-    ctx.updates.push({ id: beer.id, price: newPrice });
-    ctx.beerChanges[beer.category][beer.name] = change;
-    ctx.sectorChanges[beer.category] += change;
-  }
-
-  private applyPurchasedBeerIncrease(ctx: PriceContext, beer: Beer, rawPriceIncrease: number): void {
-    this.applyBeerPriceIncrease(ctx, beer, rawPriceIncrease);
-  }
-
-  private applySameSectorIncreases(
-    ctx: PriceContext,
-    sameSectorBeers: Beer[],
-    correlatedIncreases: Map<number, number>
-  ): void {
-    for (const beer of sameSectorBeers) {
-      this.applyBeerPriceIncrease(ctx, beer, correlatedIncreases.get(beer.id) || 0);
-    }
+    const newPrice = this.clampPrice(this.roundToQuarter(beer.currentPrice + rawIncrease + meanReversion));
+    return { beer, newPrice, change: newPrice - beer.currentPrice };
   }
 
   private calculateDecreases(
@@ -182,24 +143,53 @@ export class PricingService {
     return results;
   }
 
-  private balanceZeroSum(results: BeerResult[], totalActualIncrease: number): void {
-    const totalDecrease = results.reduce((sum, r) => sum + Math.abs(r.change), 0);
-    let imbalance = totalActualIncrease - totalDecrease;
+  /**
+   * Adjust other-sector prices in 0.25 steps until they offset the increase.
+   * Returns the increase they could not absorb (positive = market still up).
+   */
+  private balanceZeroSum(results: BeerResult[], totalActualIncrease: number): number {
+    let imbalance = totalActualIncrease + this.sumChanges(results);
 
-    // Distribute 0.25€ adjustments until balanced
-    while (Math.abs(imbalance) >= 0.20) {
+    while (Math.abs(imbalance) >= ZERO_SUM_TOLERANCE) {
       let adjusted = false;
 
       for (const result of results) {
-        if (Math.abs(imbalance) < 0.20) break;
+        if (Math.abs(imbalance) < ZERO_SUM_TOLERANCE) break;
 
-        const adjustment = imbalance > 0 ? -0.25 : 0.25;
+        const adjustment = imbalance > 0 ? -PRICE_STEP : PRICE_STEP;
         const newPrice = result.newPrice + adjustment;
 
         if (newPrice >= this.settings.minPrice && newPrice <= this.settings.maxPrice) {
-          result.newPrice = newPrice;
-          result.change = newPrice - result.beer.currentPrice;
+          this.setPrice(result, newPrice);
           imbalance += adjustment;
+          adjusted = true;
+        }
+      }
+
+      if (!adjusted) break;
+    }
+
+    return imbalance;
+  }
+
+  /**
+   * Remove the unabsorbed excess from the increases in 0.25 steps,
+   * same-sector beers first, never below their previous price
+   */
+  private scaleDownIncreases(results: BeerResult[], excess: number): void {
+    let remaining = excess;
+    const byPriority = [...results].reverse();
+
+    while (remaining >= ZERO_SUM_TOLERANCE) {
+      let adjusted = false;
+
+      for (const result of byPriority) {
+        if (remaining < ZERO_SUM_TOLERANCE) break;
+
+        const newPrice = result.newPrice - PRICE_STEP;
+        if (newPrice >= result.beer.currentPrice && newPrice >= this.settings.minPrice) {
+          this.setPrice(result, newPrice);
+          remaining -= PRICE_STEP;
           adjusted = true;
         }
       }
@@ -208,12 +198,32 @@ export class PricingService {
     }
   }
 
-  private finalizeOtherBeerUpdates(ctx: PriceContext, results: BeerResult[]): void {
-    for (const result of results) {
-      ctx.updates.push({ id: result.beer.id, price: result.newPrice });
-      ctx.beerChanges[result.beer.category][result.beer.name] = result.change;
-      ctx.sectorChanges[result.beer.category] += result.change;
+  private summarizeChanges(
+    beers: Beer[],
+    results: BeerResult[]
+  ): Pick<PurchaseImpact, 'sectorChanges' | 'beerChanges'> {
+    const sectorChanges: Record<string, number> = {};
+    const beerChanges: Record<string, Record<string, number>> = {};
+    for (const sector of new Set(beers.map(b => b.category))) {
+      sectorChanges[sector] = 0;
+      beerChanges[sector] = {};
     }
+
+    for (const { beer, change } of results) {
+      sectorChanges[beer.category] += change;
+      beerChanges[beer.category][beer.name] = change;
+    }
+
+    return { sectorChanges, beerChanges };
+  }
+
+  private setPrice(result: BeerResult, newPrice: number): void {
+    result.newPrice = newPrice;
+    result.change = newPrice - result.beer.currentPrice;
+  }
+
+  private sumChanges(results: BeerResult[]): number {
+    return results.reduce((sum, r) => sum + r.change, 0);
   }
 
   /**
