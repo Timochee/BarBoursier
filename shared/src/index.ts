@@ -130,4 +130,10 @@ export const DEFAULT_PRICE_HISTORY_LIMIT = 100;
 // Validation constants
 export const VALIDATION = {
   volatility: { min: 0.1, max: 1.0 },
+  buyQuantity: { min: 1, max: 100 },
 } as const;
+
+export function isValidBuyQuantity(quantity: unknown): quantity is number {
+  const { min, max } = VALIDATION.buyQuantity;
+  return Number.isInteger(quantity) && (quantity as number) >= min && (quantity as number) <= max;
+}

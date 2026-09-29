@@ -24,6 +24,7 @@ COPY tsconfig*.json ./
 RUN npm run build \
     && cp server/src/db/init.sql server/dist/db/init.sql \
     && npm prune --omit=dev \
+    && mkdir -p server/node_modules \
     && npm cache clean --force \
     && rm -rf /root/.npm /tmp/* \
     && rm -rf client/src server/src shared/src
@@ -46,6 +47,8 @@ WORKDIR /app
 
 # Copy only necessary production files
 COPY --from=builder --chown=app:app /app/node_modules ./node_modules
+# Workspace-local deps that npm did not hoist to the root
+COPY --from=builder --chown=app:app /app/server/node_modules ./server/node_modules
 COPY --from=builder --chown=app:app /app/shared/package.json ./node_modules/shared/package.json
 COPY --from=builder --chown=app:app /app/shared/dist ./node_modules/shared/dist
 COPY --from=builder --chown=app:app /app/server/dist ./server/dist

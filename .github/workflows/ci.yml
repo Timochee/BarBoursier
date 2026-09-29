@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production image
+        run: docker build -t barboursier:ci .
+
+      - name: Smoke test the container
+        run: |
+          docker run -d --name app -p 10000:10000 \
+            -e PORT=10000 -e JWT_SECRET=ci-secret barboursier:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:10000/health && exit 0
+            sleep 1
+          done
+          docker logs app
+          exit 1

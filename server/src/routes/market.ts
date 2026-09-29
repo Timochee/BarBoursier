@@ -1,27 +1,26 @@
 import { Router } from 'express';
-import { marketService, chartDataService } from '../services';
+import { marketService, chartDataService, BUY_ERROR_MESSAGES, type BuyError } from '../services';
 import { adminMiddleware, superadminMiddleware } from '../middleware/auth';
 import type { BuyRequest } from 'shared';
 
 const router = Router();
 
+const BUY_ERROR_STATUS: Record<BuyError, number> = {
+  invalid_quantity: 400,
+  beer_not_found: 404,
+};
+
 // POST /api/market/buy - Buy beer (Admin only)
 router.post('/buy', adminMiddleware, (req, res) => {
   const { beerId, quantity } = req.body as BuyRequest;
+  const outcome = marketService.buy(beerId, quantity);
 
-  if (!beerId || !quantity || quantity < 1) {
-    res.status(400).json({ error: 'Invalid request: beerId and quantity required' });
+  if (!outcome.ok) {
+    res.status(BUY_ERROR_STATUS[outcome.error]).json({ error: BUY_ERROR_MESSAGES[outcome.error] });
     return;
   }
 
-  const result = marketService.buy(beerId, quantity);
-
-  if (!result) {
-    res.status(404).json({ error: 'Beer not found' });
-    return;
-  }
-
-  res.json(result);
+  res.json(outcome.result);
 });
 
 // POST /api/market/reset - Reset market (Superadmin only)
